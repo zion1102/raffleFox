@@ -1,4 +1,4 @@
- import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,47 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:raffle_fox/services/firebase_services.dart';
 import 'package:raffle_fox/pages/onboard.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-
-class DashedCirclePainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double gap;
-
-  DashedCirclePainter({required this.color, this.strokeWidth = 2.0, this.gap = 5.0});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final Path path = Path();
-    final double radius = (size.width / 2) - strokeWidth / 2;
-    final double circumference = 2 * 3.141592653589793 * radius;
-    final int dashCount = (circumference / (strokeWidth + gap)).floor();
-    final double dashAngle = 2 * 3.141592653589793 / dashCount;
-
-    for (int i = 0; i < dashCount; i++) {
-      final double startAngle = i * dashAngle;
-      final double endAngle = startAngle + (dashAngle / 2);
-
-      path.addArc(
-        Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: radius),
-        startAngle,
-        endAngle - startAngle,
-      );
-    }
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return false;
-  }
-}
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -61,17 +22,54 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final TextEditingController confirmPasswordInputController = TextEditingController();
   final TextEditingController phoneNumberInputController = TextEditingController();
   final TextEditingController nameInputController = TextEditingController();
-  String selectedUserType = "regular";
   DateTime? selectedDateOfBirth;
   final FirebaseService _firebaseService = FirebaseService();
   File? _selectedImage;
-  String countryCode = '+1';
+  String countryCode = '+1'; // Default to US
+  String countryIsoCode = 'TT'; // Default ISO code for the United States
   bool _obscurePassword = true;
 
   final ImagePicker _picker = ImagePicker();
 
   bool _isPasswordValid = true;
   final List<String> _passwordErrors = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserLocation();
+  }
+
+  Future<void> _fetchUserLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() {
+          countryCode = '+1';
+          countryIsoCode = 'TT';
+        });
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+
+      if (placemarks.isNotEmpty) {
+        setState(() {
+          countryIsoCode = placemarks.first.isoCountryCode ?? 'TT';
+          countryCode = CountryCode.fromCode(countryIsoCode).dialCode ?? '+1';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        countryCode = '+1';
+        countryIsoCode = 'TT';
+      });
+    }
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -108,60 +106,58 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     return _isPasswordValid;
   }
 
-Future<void> _createUser() async {
-  // Show loading dialog
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    },
-  );
-
-  try {
-    final user = await _firebaseService.createUser(
-      email: emailInputController.text.trim(),
-      password: passwordInputController.text.trim(),
-      name: nameInputController.text,
-      phone: countryCode + phoneNumberInputController.text.trim(),
-      age: selectedDateOfBirth == null ? 0 : DateTime.now().year - selectedDateOfBirth!.year,
-      userType: selectedUserType,
-      profilePicture: _selectedImage,
+  Future<void> _createUser() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
     );
 
-    Navigator.of(context).pop(); // Close the loading dialog
-
-    if (user != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const OnboardingScreen()));
-    } else {
-      _showErrorDialog("Account creation failed. Please try again.");
-    }
-  } catch (e) {
-    Navigator.of(context).pop(); // Close the loading dialog
-    _showErrorDialog(e.toString());
-  }
-}
-
-void _showErrorDialog(String message) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text("Account Creation Failed"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("OK"),
-          ),
-        ],
+    try {
+      final user = await _firebaseService.createUser(
+        email: emailInputController.text.trim(),
+        password: passwordInputController.text.trim(),
+        name: nameInputController.text,
+        phone: countryCode + phoneNumberInputController.text.trim(),
+        age: selectedDateOfBirth == null ? 0 : DateTime.now().year - selectedDateOfBirth!.year,
+        userType: "regular",
+        profilePicture: _selectedImage,
       );
-    },
-  );
-}
 
+      Navigator.of(context).pop();
+
+      if (user != null) {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const OnboardingScreen()));
+      } else {
+        _showErrorDialog("Account creation failed. Please try again.");
+      }
+    } catch (e) {
+      Navigator.of(context).pop();
+      _showErrorDialog(e.toString());
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Account Creation Failed"),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,13 +178,16 @@ void _showErrorDialog(String message) {
               ),
             ),
             SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildProfileSection(context, size),
-                  const SizedBox(height: 32),
-                  _buildFormSection(context),
-                  const SizedBox(height: 24),
-                ],
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
+                child: Column(
+                  children: [
+                    _buildProfileSection(context, size),
+                    SizedBox(height: size.height * 0.04),
+                    _buildFormSection(context, size),
+                    SizedBox(height: size.height * 0.02),
+                  ],
+                ),
               ),
             ),
           ],
@@ -200,46 +199,45 @@ void _showErrorDialog(String message) {
   Widget _buildProfileSection(BuildContext context, Size size) {
     return SizedBox(
       height: size.height * 0.4,
-      width: size.width,
       child: Stack(
         alignment: Alignment.bottomLeft,
         children: [
           Positioned(
-            top: size.height * 0.08,
-            left: 30,
-            child: const Text(
+            top: size.height * 0.1,
+            left: size.width * 0.07,
+            child: Text(
               "Create\nAccount",
               style: TextStyle(
                 color: Colors.black,
-                fontSize: 50,
+                fontSize: size.width * 0.1,
                 fontFamily: 'Gibson',
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           Positioned(
-            top: size.height * 0.24,
-            left: 30,
+            top: size.height * 0.25,
+            left: size.width * 0.07,
             child: GestureDetector(
               onTap: _pickImage,
               child: SizedBox(
-                height: 90,
-                width: 90,
+                height: size.width * 0.25,
+                width: size.width * 0.25,
                 child: CustomPaint(
                   painter: DashedCirclePainter(color: Colors.black),
                   child: Center(
                     child: _selectedImage == null
                         ? SvgPicture.asset(
                             "assets/images/img_camera_icon.svg",
-                            height: 30,
-                            width: 30,
+                            height: size.width * 0.1,
+                            width: size.width * 0.1,
                           )
                         : ClipOval(
                             child: Image.file(
                               _selectedImage!,
                               fit: BoxFit.cover,
-                              height: 80,
-                              width: 80,
+                              height: size.width * 0.2,
+                              width: size.width * 0.2,
                             ),
                           ),
                   ),
@@ -252,12 +250,34 @@ void _showErrorDialog(String message) {
     );
   }
 
+  Widget _buildFormSection(BuildContext context, Size size) {
+    return Column(
+      children: [
+        _buildNameInput(),
+        SizedBox(height: size.height * 0.02),
+        _buildDateOfBirthPicker(context),
+        SizedBox(height: size.height * 0.02),
+        _buildEmailInput(),
+        SizedBox(height: size.height * 0.02),
+        _buildPasswordInput(),
+        SizedBox(height: size.height * 0.02),
+        _buildConfirmPasswordInput(),
+        SizedBox(height: size.height * 0.02),
+        _buildPhoneNumberInput(),
+        SizedBox(height: size.height * 0.03),
+        _buildSubmitButton(),
+      ],
+    );
+  }
+
   Widget _buildNameInput() {
     return _buildTextField(controller: nameInputController, hintText: "Name");
   }
 
-  Widget _buildDateOfBirthPicker(BuildContext context) {
-    return GestureDetector(
+Widget _buildDateOfBirthPicker(BuildContext context) {
+  return SizedBox(
+    width: double.infinity, // Match the width of other fields
+    child: GestureDetector(
       onTap: () async {
         DateTime? pickedDate = await showDatePicker(
           context: context,
@@ -272,7 +292,6 @@ void _showErrorDialog(String message) {
         }
       },
       child: Container(
-        width: 334,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
           color: const Color(0XFFF8F8F8),
@@ -290,8 +309,10 @@ void _showErrorDialog(String message) {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildEmailInput() {
     return _buildTextField(controller: emailInputController, hintText: "Email");
@@ -311,18 +332,57 @@ void _showErrorDialog(String message) {
               _obscurePassword = !_obscurePassword;
             });
           },
+          onChanged: (value) {
+            _validatePassword(value);
+          },
         ),
-        if (!_isPasswordValid && _passwordErrors.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _passwordErrors.map((error) => Text(
-                error,
-                style: const TextStyle(color: Colors.red, fontSize: 12),
-              )).toList(),
+        const SizedBox(height: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildPasswordHint(
+              "Password must be between 8 and 16 characters",
+              passwordInputController.text.length >= 8 &&
+                  passwordInputController.text.length <= 16,
             ),
+            _buildPasswordHint(
+              "Password must contain an uppercase letter",
+              RegExp(r'[A-Z]').hasMatch(passwordInputController.text),
+            ),
+            _buildPasswordHint(
+              "Password must contain a lowercase letter",
+              RegExp(r'[a-z]').hasMatch(passwordInputController.text),
+            ),
+            _buildPasswordHint(
+              "Password must contain a number",
+              RegExp(r'\d').hasMatch(passwordInputController.text),
+            ),
+            _buildPasswordHint(
+              "Password must contain a special character",
+              RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(passwordInputController.text),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordHint(String text, bool isValid) {
+    return Row(
+      children: [
+        Icon(
+          isValid ? Icons.check_circle : Icons.cancel,
+          color: isValid ? Colors.green : Colors.red,
+          size: 16,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: TextStyle(
+            color: isValid ? Colors.green : Colors.red,
+            fontSize: 12,
           ),
+        ),
       ],
     );
   }
@@ -345,7 +405,7 @@ void _showErrorDialog(String message) {
     return Row(
       children: [
         CountryCodePicker(
-          initialSelection: countryCode,
+          initialSelection: countryIsoCode,
           onChanged: (country) {
             setState(() {
               countryCode = country.dialCode ?? '+1';
@@ -396,83 +456,6 @@ void _showErrorDialog(String message) {
     );
   }
 
-  Widget _buildUserTypeDropdown() {
-    return SizedBox(
-      width: 334,
-      child: DropdownButtonFormField<String>(
-        value: selectedUserType,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0XFFF8F8F8),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(26),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        ),
-        onChanged: (String? newValue) {
-          setState(() {
-            selectedUserType = newValue!;
-          });
-        },
-        items: <String>['regular', 'creator']
-            .map<DropdownMenuItem<String>>((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(
-              value[0].toUpperCase() + value.substring(1),
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 14,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildFormSection(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Column(
-        children: [
-          _buildNameInput(),
-          const SizedBox(height: 12),
-          _buildDateOfBirthPicker(context),
-          const SizedBox(height: 12),
-          _buildEmailInput(),
-          const SizedBox(height: 12),
-          _buildPasswordInput(),
-          const SizedBox(height: 12),
-          _buildConfirmPasswordInput(),
-          const SizedBox(height: 12),
-          _buildPhoneNumberInput(),
-          const SizedBox(height: 12),
-          _buildUserTypeDropdown(),
-          const SizedBox(height: 24),
-          _buildSubmitButton(),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Cancel",
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 15,
-                fontFamily: 'Gotham',
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
@@ -480,9 +463,10 @@ void _showErrorDialog(String message) {
     bool obscureText = false,
     IconData? suffixIcon,
     VoidCallback? onSuffixIconPressed,
+    ValueChanged<String>? onChanged,
   }) {
     return SizedBox(
-      width: 334,
+      width: double.infinity,
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
@@ -493,6 +477,7 @@ void _showErrorDialog(String message) {
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w500,
         ),
+        onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(
@@ -520,3 +505,42 @@ void _showErrorDialog(String message) {
   }
 }
 
+class DashedCirclePainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+
+  DashedCirclePainter({required this.color, this.strokeWidth = 2.0, this.gap = 5.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final Path path = Path();
+    final double radius = (size.width / 2) - strokeWidth / 2;
+    final double circumference = 2 * 3.141592653589793 * radius;
+    final int dashCount = (circumference / (strokeWidth + gap)).floor();
+    final double dashAngle = 2 * 3.141592653589793 / dashCount;
+
+    for (int i = 0; i < dashCount; i++) {
+      final double startAngle = i * dashAngle;
+      final double endAngle = startAngle + (dashAngle / 2);
+
+      path.addArc(
+        Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: radius),
+        startAngle,
+        endAngle - startAngle,
+      );
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return false;
+  }
+}
