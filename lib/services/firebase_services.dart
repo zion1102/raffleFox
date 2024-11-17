@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
 
 
+
 class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
    final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -119,16 +120,10 @@ Future<UserCredential?> loginUser({
   try {
     print("Attempting to log in user with email: $email");
 
-    if (FirebaseConfig.authInstance == null) {
-      throw Exception("FirebaseAuth instance is not initialized.");
-    }
+    UserCredential userCredential = await FirebaseAuth.instance
+        .signInWithEmailAndPassword(email: email, password: password);
 
-    UserCredential userCredential = await FirebaseConfig.authInstance!.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password.trim(),
-    );
-
-    print("User logged in successfully: ${userCredential.user!.uid}");
+    print("User logged in successfully: ${userCredential.user?.uid}");
     return userCredential;
   } catch (e) {
     print("Error logging in: $e");

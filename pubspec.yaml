@@ -40,6 +40,7 @@ dependencies:
   flutter_launcher_icons: ^0.14.1
   cloud_firestore: ^5.3.0 # Lower version
   firebase_auth: ^5.0.0 # Lower version
+  firebase_admin: ^0.3.0
 
 dev_dependencies:
   flutter_test:

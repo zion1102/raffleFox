@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:raffle_fox/pages/create_raffle.dart';
 import 'package:raffle_fox/pages/landingPage.dart';
@@ -197,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-void _loginUser() async {
+ void _loginUser() async {
   final email = emailInputController.text.trim();
   final password = passwordInputController.text.trim();
 
@@ -219,43 +220,43 @@ void _loginUser() async {
   }
 
   try {
-    // Login the user using Firebase Authentication
-    final userCredential = await _firebaseService.loginUser(
-      email: email,
-      password: password,
-    );
+    // Attempt login
+    final UserCredential? userCredential =
+        await _firebaseService.loginUser(email: email, password: password);
 
-    if (userCredential != null) {
-      // Fetch `userType` from Firestore
-      final uid = userCredential.user!.uid;
-      final userType = await _firebaseService.getUserType(uid);
+    final User? user = userCredential?.user;
 
-      if (userType == null) {
-        throw Exception("Unable to determine user type.");
-      }
+    if (user != null) {
+      print("User logged in successfully: ${user.uid}");
 
+      // Fetch user type
+      final userType = await _firebaseService.getUserType(user.uid);
       print("User logged in with userType: $userType");
 
-      // Navigate to the appropriate screen based on userType
-      if (userType == 'creator') {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const CreateRaffleScreen(),
-          ),
-          (route) => false,
-        );
-      } else if (userType == 'user') {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const ShopScreen(),
-          ),
-          (route) => false,
-        );
+      if (userType != null) {
+        // Navigate based on user type
+        if (userType == 'creator') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const CreateRaffleScreen(),
+            ),
+            (route) => false,
+          );
+        } else if (userType == 'regular') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const ShopScreen(),
+            ),
+            (route) => false,
+          );
+        } else {
+          throw Exception("Unknown user type: $userType");
+        }
       } else {
-        throw Exception("Unknown user type: $userType");
+        throw Exception("Unable to determine user type.");
       }
     } else {
-      print("Failed to log in user.");
+      throw Exception("Failed to log in user.");
     }
   } catch (e) {
     print("Error logging in: $e");
@@ -264,11 +265,7 @@ void _loginUser() async {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text("Login Failed"),
-          content: Text(
-            e.toString().contains('permission-denied')
-                ? "You don't have permission to access this data. Please contact support."
-                : "An error occurred. Please try again.",
-          ),
+          content: Text("An error occurred: ${e.toString()}"),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),

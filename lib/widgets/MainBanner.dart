@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:raffle_fox/pages/raffle_detail.dart';
-import 'package:raffle_fox/services/firebase_services.dart'; 
+import 'package:raffle_fox/services/firebase_services.dart';
 import 'package:raffle_fox/services/raffle_service.dart';
 
 class MainBanner extends StatefulWidget {
@@ -21,30 +21,37 @@ class _MainBannerState extends State<MainBanner> {
     _fetchRecentRaffle();
   }
 
- Future<void> _fetchRecentRaffle() async {
-  Map<String, dynamic>? raffle = await _raffleService.fetchMostRecentRaffle();
-  
-  // Check if the widget is still mounted before calling setState
-  if (!mounted) return;
+  Future<void> _fetchRecentRaffle() async {
+    try {
+      Map<String, dynamic>? raffle = await _raffleService.fetchMostRecentRaffle();
 
-  if (raffle != null && raffle['picture'] != null) {
-    setState(() {
-      recentRaffle = raffle;
-    });
-  } else {
-    print("No raffles found.");
-    setState(() {
-      recentRaffle = {
-        'name': 'No raffles available',
-        'picture': 'https://via.placeholder.com/370x160.png?text=No+raffles+available',
-      };
-    });
+      if (!mounted) return;
+
+      setState(() {
+        recentRaffle = raffle ?? {
+          'title': 'No raffles available',
+          'picture': 'https://via.placeholder.com/370x160.png?text=No+raffles+available',
+        };
+      });
+    } catch (e) {
+      print("Error fetching recent raffle: $e");
+      if (mounted) {
+        setState(() {
+          recentRaffle = {
+            'title': 'Error loading raffle',
+            'picture': 'https://via.placeholder.com/370x160.png?text=Error',
+          };
+        });
+      }
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
+    final title = recentRaffle?['title'] ?? 'Loading...';
+    final picture = recentRaffle?['picture'] as String? ??
+        'https://via.placeholder.com/370x160.png?text=No+raffles+available';
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.only(top: 40),
@@ -68,9 +75,7 @@ class _MainBannerState extends State<MainBanner> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     image: DecorationImage(
-                      image: recentRaffle != null && recentRaffle!['picture'] != 'https://via.placeholder.com/370x160.png?text=No+raffles+available'
-                          ? NetworkImage(recentRaffle!['picture']) as ImageProvider
-                          : const NetworkImage('https://via.placeholder.com/370x160.png?text=No+raffles+available'),
+                      image: NetworkImage(picture),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -85,7 +90,8 @@ class _MainBannerState extends State<MainBanner> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => RaffleDetailScreen(raffleData: recentRaffle!),
+                          builder: (context) =>
+                              RaffleDetailScreen(raffleData: recentRaffle!),
                         ),
                       );
                       print('Play Now button tapped');
@@ -126,7 +132,7 @@ class _MainBannerState extends State<MainBanner> {
                 left: 22,
                 top: 20,
                 child: Text(
-                  recentRaffle != null ? recentRaffle!['title'] : 'Loading...',
+                  title,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
