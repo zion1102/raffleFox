@@ -24,7 +24,7 @@ class MostPopular extends StatelessWidget {
         } else if (snapshot.hasError) {
           return const Center(child: Text("Error loading popular raffles"));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text("No popular raffles found"));
+          return const Center(child: Text(""));
         }
 
         List<Map<String, dynamic>> raffles = snapshot.data!;

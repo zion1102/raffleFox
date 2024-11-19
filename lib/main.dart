@@ -11,7 +11,8 @@ var globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await Future.delayed(const Duration(seconds: 1)); // Simulate splash or delay for app readiness
+
   // Initialize Firebase via FirebaseConfig
   await FirebaseConfig.initializeFirebase();
 
@@ -24,7 +25,6 @@ void main() async {
 
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -47,7 +47,10 @@ class MyApp extends StatelessWidget {
           routes: AppRoutes.routes,
           scaffoldMessengerKey: globalMessengerKey, // Add global messenger key
           theme: ThemeData(
-            scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255), // Set your global background color
+            scaffoldBackgroundColor: const Color(0XFFFFFFFF), // Global background color
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
       ),

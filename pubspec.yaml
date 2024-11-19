@@ -43,6 +43,7 @@ dependencies:
   firebase_admin: ^0.3.0
   geolocator: ^13.0.2
   geocoding: ^3.0.0
+  flutter_native_splash: ^2.4.3
 
 dev_dependencies:
   flutter_test:
@@ -70,7 +71,15 @@ flutter:
     - assets/images/img_image.png
     - assets/images/img_group_1000004660.svg
     - assets/images/img_ellipse.svg
-    
+    - assets/images/raffleFox.jpeg
 
-  
+flutter_native_splash:
+  color: "#ffffff" # Background color (white in this case)
+  image: assets/images/splash.png
+  android: true
+  ios: true
+  web: false # Set to true if building for web
+  fullscreen: true 
+ 
+
   

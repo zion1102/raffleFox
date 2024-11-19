@@ -8,6 +8,7 @@ import 'package:raffle_fox/services/firebase_services.dart';
 import 'package:raffle_fox/pages/onboard.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:flutter/services.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -250,12 +251,13 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     );
   }
 
-  Widget _buildFormSection(BuildContext context, Size size) {
-    return Column(
+ Widget _buildFormSection(BuildContext context, Size size) {
+  return AutofillGroup(
+    child: Column(
       children: [
         _buildNameInput(),
         SizedBox(height: size.height * 0.02),
-        _buildDateOfBirthPicker(context),
+        _buildDateOfBirthPicker(context), // Autofill not applicable for date picker
         SizedBox(height: size.height * 0.02),
         _buildEmailInput(),
         SizedBox(height: size.height * 0.02),
@@ -267,12 +269,26 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         SizedBox(height: size.height * 0.03),
         _buildSubmitButton(),
       ],
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildNameInput() {
-    return _buildTextField(controller: nameInputController, hintText: "Name");
-  }
+ Widget _buildNameInput() {
+  return _buildTextField(
+    controller: nameInputController,
+    hintText: "Name",
+    autofillHints: [AutofillHints.name], // Autofill hint for name
+  );
+}
+
+Widget _buildEmailInput() {
+  return _buildTextField(
+    controller: emailInputController,
+    hintText: "Email",
+    keyboardType: TextInputType.emailAddress,
+    autofillHints: [AutofillHints.email], // Autofill hint for email
+  );
+}
 
 Widget _buildDateOfBirthPicker(BuildContext context) {
   return SizedBox(
@@ -314,58 +330,57 @@ Widget _buildDateOfBirthPicker(BuildContext context) {
 }
 
 
-  Widget _buildEmailInput() {
-    return _buildTextField(controller: emailInputController, hintText: "Email");
-  }
+ 
 
-  Widget _buildPasswordInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildTextField(
-          controller: passwordInputController,
-          hintText: "Password",
-          obscureText: _obscurePassword,
-          suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
-          onSuffixIconPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
-          onChanged: (value) {
-            _validatePassword(value);
-          },
-        ),
-        const SizedBox(height: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPasswordHint(
-              "Password must be between 8 and 16 characters",
-              passwordInputController.text.length >= 8 &&
-                  passwordInputController.text.length <= 16,
-            ),
-            _buildPasswordHint(
-              "Password must contain an uppercase letter",
-              RegExp(r'[A-Z]').hasMatch(passwordInputController.text),
-            ),
-            _buildPasswordHint(
-              "Password must contain a lowercase letter",
-              RegExp(r'[a-z]').hasMatch(passwordInputController.text),
-            ),
-            _buildPasswordHint(
-              "Password must contain a number",
-              RegExp(r'\d').hasMatch(passwordInputController.text),
-            ),
-            _buildPasswordHint(
-              "Password must contain a special character",
-              RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(passwordInputController.text),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+ Widget _buildPasswordInput() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildTextField(
+        controller: passwordInputController,
+        hintText: "Password",
+        obscureText: _obscurePassword,
+        autofillHints: [AutofillHints.newPassword], // Autofill hint for new password
+        suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
+        onSuffixIconPressed: () {
+          setState(() {
+            _obscurePassword = !_obscurePassword;
+          });
+        },
+        onChanged: (value) {
+          _validatePassword(value);
+        },
+      ),
+      const SizedBox(height: 8),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildPasswordHint(
+            "Password must be between 8 and 16 characters",
+            passwordInputController.text.length >= 8 &&
+                passwordInputController.text.length <= 16,
+          ),
+          _buildPasswordHint(
+            "Password must contain an uppercase letter",
+            RegExp(r'[A-Z]').hasMatch(passwordInputController.text),
+          ),
+          _buildPasswordHint(
+            "Password must contain a lowercase letter",
+            RegExp(r'[a-z]').hasMatch(passwordInputController.text),
+          ),
+          _buildPasswordHint(
+            "Password must contain a number",
+            RegExp(r'\d').hasMatch(passwordInputController.text),
+          ),
+          _buildPasswordHint(
+            "Password must contain a special character",
+            RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(passwordInputController.text),
+          ),
+        ],
+      ),
+    ],
+  );
+}
 
   Widget _buildPasswordHint(String text, bool isValid) {
     return Row(
@@ -387,50 +402,51 @@ Widget _buildDateOfBirthPicker(BuildContext context) {
     );
   }
 
-  Widget _buildConfirmPasswordInput() {
-    return _buildTextField(
-      controller: confirmPasswordInputController,
-      hintText: "Confirm Password",
-      obscureText: _obscurePassword,
-      suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
-      onSuffixIconPressed: () {
-        setState(() {
-          _obscurePassword = !_obscurePassword;
-        });
-      },
-    );
-  }
+Widget _buildConfirmPasswordInput() {
+  return _buildTextField(
+    controller: confirmPasswordInputController,
+    hintText: "Confirm Password",
+    obscureText: _obscurePassword,
+    autofillHints: [AutofillHints.newPassword],
+    suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
+    onSuffixIconPressed: () {
+      setState(() {
+        _obscurePassword = !_obscurePassword;
+      });
+    },
+  );
+}
 
-  Widget _buildPhoneNumberInput() {
-    return Row(
-      children: [
-        CountryCodePicker(
-          initialSelection: countryIsoCode,
-          onChanged: (country) {
-            setState(() {
-              countryCode = country.dialCode ?? '+1';
-            });
-          },
-        ),
-        Expanded(
-          child: TextFormField(
-            controller: phoneNumberInputController,
-            keyboardType: TextInputType.phone,
-            decoration: InputDecoration(
-              hintText: "Your number",
-              filled: true,
-              fillColor: const Color(0XFFF8F8F8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(26),
-                borderSide: BorderSide.none,
-              ),
+Widget _buildPhoneNumberInput() {
+  return Row(
+    children: [
+      CountryCodePicker(
+        initialSelection: countryIsoCode,
+        onChanged: (country) {
+          setState(() {
+            countryCode = country.dialCode ?? '+1';
+          });
+        },
+      ),
+      Expanded(
+        child: TextFormField(
+          controller: phoneNumberInputController,
+          keyboardType: TextInputType.phone,
+          autofillHints: [AutofillHints.telephoneNumber],
+          decoration: InputDecoration(
+            hintText: "Your number",
+            filled: true,
+            fillColor: const Color(0XFFF8F8F8),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(26),
+              borderSide: BorderSide.none,
             ),
           ),
         ),
-      ],
-    );
-  }
-
+      ),
+    ],
+  );
+}
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
@@ -457,52 +473,54 @@ Widget _buildDateOfBirthPicker(BuildContext context) {
   }
 
   Widget _buildTextField({
-    required TextEditingController controller,
-    required String hintText,
-    TextInputType keyboardType = TextInputType.text,
-    bool obscureText = false,
-    IconData? suffixIcon,
-    VoidCallback? onSuffixIconPressed,
-    ValueChanged<String>? onChanged,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: obscureText,
-        style: const TextStyle(
-          color: Colors.black,
+  required TextEditingController controller,
+  required String hintText,
+  TextInputType keyboardType = TextInputType.text,
+  bool obscureText = false,
+  IconData? suffixIcon,
+  VoidCallback? onSuffixIconPressed,
+  ValueChanged<String>? onChanged,
+  List<String>? autofillHints, // Add autofillHints parameter
+}) {
+  return SizedBox(
+    width: double.infinity,
+    child: TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      onChanged: onChanged,
+      autofillHints: autofillHints, // Add autofill hints
+      style: const TextStyle(
+        color: Colors.black,
+        fontSize: 14,
+        fontFamily: 'Poppins',
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(
+          color: Color(0XFFD2D2D2),
           fontSize: 14,
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w500,
         ),
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: const TextStyle(
-            color: Color(0XFFD2D2D2),
-            fontSize: 14,
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w500,
-          ),
-          fillColor: const Color(0XFFF8F8F8),
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(26),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          suffixIcon: suffixIcon != null
-              ? IconButton(
-                  icon: Icon(suffixIcon, color: Colors.grey),
-                  onPressed: onSuffixIconPressed,
-                )
-              : null,
+        fillColor: const Color(0XFFF8F8F8),
+        filled: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(26),
+          borderSide: BorderSide.none,
         ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        suffixIcon: suffixIcon != null
+            ? IconButton(
+                icon: Icon(suffixIcon, color: Colors.grey),
+                onPressed: onSuffixIconPressed,
+              )
+            : null,
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class DashedCirclePainter extends CustomPainter {

@@ -41,7 +41,9 @@ class _YourFavoritesState extends State<YourFavorites> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              recentLikedRaffles.isEmpty
+              ? const Center(child: Text(""))
+              : const Text(
                 'Your Favorites',
                 style: TextStyle(
                   fontSize: 21,
@@ -49,7 +51,9 @@ class _YourFavoritesState extends State<YourFavorites> {
                   color: Color(0xFFF15B29),
                 ),
               ),
-              SvgPicture.asset(
+              recentLikedRaffles.isEmpty
+              ? const Center(child: Text(""))
+              :SvgPicture.asset(
                 'assets/images/star.svg',
                 width: 19,
                 height: 18.3,
@@ -59,7 +63,7 @@ class _YourFavoritesState extends State<YourFavorites> {
           const SizedBox(height: 20),
           // Display the liked raffles
           recentLikedRaffles.isEmpty
-              ? const Center(child: Text("No favorites yet."))
+              ? const Center(child: Text(""))
               : Center(
                   child: GridView.builder(
                     shrinkWrap: true,

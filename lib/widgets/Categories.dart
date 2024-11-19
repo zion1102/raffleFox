@@ -16,14 +16,12 @@ class _CategoriesSectionState extends State<CategoriesSection> {
   void initState() {
     super.initState();
     _rafflesByCategoryFuture = _raffleService.getRafflesByCategories([
-      'Cars',
-      'Vacations',
-      'Tickets',
-      'Phones',
-      'Sneakers',
-      'Houses',
-      'Clothes',
-      'Other',
+      'Lifestyle',
+      'Entertainment',
+      'Devices',
+      'Electronics',
+      'Style',
+      'Beauty & Grooming',
     ]);
   }
 
@@ -37,7 +35,7 @@ class _CategoriesSectionState extends State<CategoriesSection> {
         } else if (snapshot.hasError) {
           return const Center(child: Text('Error loading categories'));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No raffles available'));
+          return const Center(child: Text(''));
         }
 
         Map<String, List<Map<String, dynamic>>> rafflesByCategory = snapshot.data!;

@@ -26,7 +26,6 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
   final TextEditingController detail3Controller = TextEditingController();
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-
   DateTime? startDate;
   DateTime? endDate;
   File? pictureFile;
@@ -41,24 +40,30 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
   String? selectedTier;
   double? selectedPrice;
 
-  final List<String> categories = ['Cars', 'Vacations', 'Sneakers', 'Tickets', 'Phones', 'Clothes', 'Houses'];
+  final List<String> categories = [
+    'Lifestyle',
+    'Entertainment',
+    'Devices',
+    'Electronics',
+    'Style',
+    'Beauty & Grooming'
+  ];
   final List<String> tiers = ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4'];
 
-  // Hardcoded price mappings for each category and tier
+  // Updated price mappings for each category and tier
   final Map<String, Map<String, double>> priceMap = {
-    'Cars': {'Tier 1': 1000.0, 'Tier 2': 2000.0, 'Tier 3': 3000.0, 'Tier 4': 4000.0},
-    'Vacations': {'Tier 1': 500.0, 'Tier 2': 1000.0, 'Tier 3': 1500.0, 'Tier 4': 2000.0},
-    'Sneakers': {'Tier 1': 50.0, 'Tier 2': 100.0, 'Tier 3': 150.0, 'Tier 4': 200.0},
-    'Tickets': {'Tier 1': 30.0, 'Tier 2': 60.0, 'Tier 3': 90.0, 'Tier 4': 120.0},
-    'Phones': {'Tier 1': 300.0, 'Tier 2': 600.0, 'Tier 3': 900.0, 'Tier 4': 1200.0},
-    'Clothes': {'Tier 1': 20.0, 'Tier 2': 40.0, 'Tier 3': 60.0, 'Tier 4': 80.0},
-    'Houses': {'Tier 1': 5000.0, 'Tier 2': 10000.0, 'Tier 3': 15000.0, 'Tier 4': 20000.0},
+    'Lifestyle': {'Tier 1': 500.0, 'Tier 2': 1000.0, 'Tier 3': 1500.0, 'Tier 4': 2000.0},
+    'Entertainment': {'Tier 1': 100.0, 'Tier 2': 300.0, 'Tier 3': 500.0, 'Tier 4': 700.0},
+    'Devices': {'Tier 1': 300.0, 'Tier 2': 600.0, 'Tier 3': 900.0, 'Tier 4': 1200.0},
+    'Electronics': {'Tier 1': 200.0, 'Tier 2': 500.0, 'Tier 3': 800.0, 'Tier 4': 1000.0},
+    'Style': {'Tier 1': 50.0, 'Tier 2': 100.0, 'Tier 3': 150.0, 'Tier 4': 200.0},
+    'Beauty & Grooming': {'Tier 1': 20.0, 'Tier 2': 50.0, 'Tier 3': 80.0, 'Tier 4': 100.0},
   };
 
   Future<File?> compressImage(File file) async {
     final image = img.decodeImage(file.readAsBytesSync());
-    final resizedImage = img.copyResize(image!, width: 800); // Resize to a width of 800 pixels, adjust as needed
-    final compressedBytes = img.encodeJpg(resizedImage, quality: 80); // Adjust quality as needed
+    final resizedImage = img.copyResize(image!, width: 800);
+    final compressedBytes = img.encodeJpg(resizedImage, quality: 80);
     final tempDir = await getTemporaryDirectory();
     final compressedFile = File('${tempDir.path}/compressed_image.jpg')..writeAsBytesSync(compressedBytes);
     return compressedFile;
@@ -68,7 +73,7 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       File? imageFile = File(pickedFile.path);
-      imageFile = await compressImage(imageFile); // Compress the image
+      imageFile = await compressImage(imageFile);
       setState(() {
         if (isPrimaryImage) {
           pictureFile = imageFile;
@@ -129,7 +134,7 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
                   selectedCategory = category;
                   _updatePrice();
                 });
-                Navigator.pop(context); // Close the modal
+                Navigator.pop(context);
               },
             );
           }).toList(),
@@ -159,7 +164,7 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
                   selectedTier = tier;
                   _updatePrice();
                 });
-                Navigator.pop(context); // Close the modal
+                Navigator.pop(context);
               },
             );
           }).toList(),
@@ -211,57 +216,58 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
       _showErrorDialog('Please select a category and tier before proceeding.');
     }
   }
-void _createRaffle() async {
-  String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  try {
-    // Fetch userType
-    String? userType = await _firebaseService.getUserType(uid);
+  void _createRaffle() async {
+    String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    if (userType != 'creator') {
-      throw Exception("You are not authorized to create a raffle.");
+    try {
+      // Check if user is authorized
+      String? userType = await _firebaseService.getUserType(uid);
+
+      if (userType != 'creator') {
+        throw Exception("You are not authorized to create a raffle.");
+      }
+
+      // Show creation progress
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Creating raffle...')),
+      );
+
+      // Upload images
+      final primaryImageRef = _storage.ref().child('raffle_images/$uid/primary.jpg');
+      await primaryImageRef.putFile(pictureFile!);
+      final primaryImageUrl = await primaryImageRef.getDownloadURL();
+
+      await _raffleService.addRaffle(
+        title: nameController.text,
+        description: descriptionController.text,
+        expiryDate: endDate!,
+        category: selectedCategory!,
+        costPer: selectedPrice!,
+        pictureFile: pictureFile!,
+        editedGamePictureFile: editedGamePictureFile!,
+        uneditedGamePictureFile: uneditedGamePictureFile!,
+        creatorId: uid,
+        raffleId: DateTime.now().millisecondsSinceEpoch.toString(),
+        ticketsSold: 0,
+        detailOne: detail1Controller.text,
+        detailTwo: detail2Controller.text,
+        detailThree: detail3Controller.text,
+      );
+
+      // Success
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Raffle created successfully!')),
+      );
+      _clearFields();
+    } catch (e) {
+      print("Error creating raffle: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create raffle: $e')),
+      );
     }
-
-    // Proceed with creating the raffle if the userType is 'creator'
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Creating raffle...')),
-    );
-
-    // Upload images and save raffle to Firestore (existing code)
-    final primaryImageRef = _storage.ref().child('raffle_images/$uid/primary.jpg');
-    await primaryImageRef.putFile(pictureFile!);
-    final primaryImageUrl = await primaryImageRef.getDownloadURL();
-
-    await _raffleService.addRaffle(
-      title: nameController.text,
-      description: descriptionController.text,
-      expiryDate: endDate!,
-      category: selectedCategory!,
-      costPer: selectedPrice!,
-      pictureFile: pictureFile!,
-      editedGamePictureFile: editedGamePictureFile!,
-      uneditedGamePictureFile: uneditedGamePictureFile!,
-      creatorId: uid,
-      raffleId: DateTime.now().millisecondsSinceEpoch.toString(),
-      ticketsSold: 0,
-      detailOne: detail1Controller.text,
-      detailTwo: detail2Controller.text,
-      detailThree: detail3Controller.text,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Raffle created successfully!')),
-    );
-
-    _clearFields();
-
-  } catch (e) {
-    print("Error creating raffle: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to create raffle: ${e.toString()}')),
-    );
   }
-}
+
   void _clearFields() {
     setState(() {
       nameController.clear();
@@ -281,7 +287,13 @@ void _createRaffle() async {
   }
 
   bool _validateFields() {
-    if (selectedCategory == null || selectedTier == null || startDate == null || endDate == null || pictureFile == null || editedGamePictureFile == null || uneditedGamePictureFile == null) {
+    if (selectedCategory == null ||
+        selectedTier == null ||
+        startDate == null ||
+        endDate == null ||
+        pictureFile == null ||
+        editedGamePictureFile == null ||
+        uneditedGamePictureFile == null) {
       _showErrorDialog('Please fill all required fields.');
       return false;
     }
