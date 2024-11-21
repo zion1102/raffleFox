@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:raffle_fox/pages/login_screen.dart';
+import 'package:raffle_fox/pages/topup.dart';
 
 import 'package:raffle_fox/services/firebase_services.dart';
 import 'package:raffle_fox/services/raffle_service.dart';
@@ -33,7 +34,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool isCreator = false;
   bool loading = true;
   bool rafflesFetched = false;
-  List<Timer> _timers = [];
+  final List<Timer> _timers = [];
 
   @override
   void initState() {
@@ -265,43 +266,48 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             ],
                           ),
                           Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.notifications_outlined, color: Color(0xFFFF5F00)),
-                                onPressed: () {},
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.menu_outlined, color: Color(0xFFFF5F00)),
-                                onPressed: () {},
-                              ),
-                              PopupMenuButton<String>(
-                                icon: const Icon(Icons.settings_outlined, color: Color(0xFFFF5F00)),
-                                onSelected: (value) {
-                                  if (value == 'logout') {
-                                    _logout();
-                                  } else if (value == 'editProfile') {
-                                   
-                                  } else if (value == 'deleteAccount') {
-                                    _deleteAccount();
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem<String>(
-                                    value: 'editProfile',
-                                    child: Text('Edit Profile'),
-                                  ),
-                                  const PopupMenuItem<String>(
-                                    value: 'deleteAccount',
-                                    child: Text('Delete Account'),
-                                  ),
-                                  const PopupMenuItem<String>(
-                                    value: 'logout',
-                                    child: Text('Logout'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+  children: [
+    IconButton(
+      icon: const Icon(Icons.notifications_outlined, color: Color(0xFFFF5F00)),
+      onPressed: () {},
+    ),
+    IconButton(
+      icon: const Icon(Icons.attach_money, color: Color(0xFFFF5F00)),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TopUpPage()),
+        );
+      },
+    ),
+    PopupMenuButton<String>(
+      icon: const Icon(Icons.settings_outlined, color: Color(0xFFFF5F00)),
+      onSelected: (value) {
+        if (value == 'logout') {
+          _logout();
+        } else if (value == 'editProfile') {
+        } else if (value == 'deleteAccount') {
+          _deleteAccount();
+        }
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem<String>(
+          value: 'editProfile',
+          child: Text('Edit Profile'),
+        ),
+        const PopupMenuItem<String>(
+          value: 'deleteAccount',
+          child: Text('Delete Account'),
+        ),
+        const PopupMenuItem<String>(
+          value: 'logout',
+          child: Text('Logout'),
+        ),
+      ],
+    ),
+  ],
+),
+
                         ],
                       ),
                       const SizedBox(height: 16),

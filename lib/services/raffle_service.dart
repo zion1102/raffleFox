@@ -169,23 +169,26 @@ class RaffleService {
 Future<List<Map<String, dynamic>>> getTopRaffles() async {
   try {
     print("Fetching top raffles from Firestore...");
-    
+
     // Define the current date as a Firestore-compatible timestamp
     Timestamp currentDate = Timestamp.fromDate(DateTime.now());
-    
+
+    // Query Firestore
     QuerySnapshot querySnapshot = await _firestore
         .collection('raffles')
-        .where('expiryDate', isGreaterThan: currentDate)
-        .orderBy('ticketsSold', descending: true)
-        .orderBy('title')
-        .limit(5)
+        .where('expiryDate', isGreaterThan: currentDate) // Only fetch non-expired raffles
+        .orderBy('ticketsSold', descending: true)       // Order by most tickets sold
+        .orderBy('title')                               // Secondary order by title alphabetically
+        .limit(5)                                       // Limit to 5 results
         .get();
 
     print("Query result: ${querySnapshot.docs.length} documents fetched.");
 
+    // Transform and return the data
     return querySnapshot.docs.map((doc) {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-      data['raffleId'] = doc.id;
+      data['raffleId'] = doc.id; // Add the document ID to the data
+      print("Fetched Raffle: ${data['title']}, Tickets Sold: ${data['ticketsSold']}, Expiry Date: ${data['expiryDate']}");
       return data;
     }).toList();
   } catch (e) {
@@ -193,6 +196,7 @@ Future<List<Map<String, dynamic>>> getTopRaffles() async {
     return [];
   }
 }
+
 
 Future<Map<String, List<Map<String, dynamic>>>> getRafflesByCategories(List<String> categories) async {
   Map<String, List<Map<String, dynamic>>> rafflesByCategory = {};

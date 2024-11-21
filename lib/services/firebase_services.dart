@@ -209,15 +209,16 @@ Future<Map<String, dynamic>?> getUserDetails() async {
 
   // Function to update the user's credits (example of updating a field)
   Future<void> updateUserCredits(String uid, int newCredits) async {
-    try {
-      await _firestore.collection('users').doc(uid).update({
-        'credits': newCredits,
-      });
-      print("User credits updated successfully.");
-    } catch (e) {
-      print("Error updating user credits: $e");
-    }
+  try {
+    await _firestore.collection('users').doc(uid).update({
+      'credits': newCredits, // Ensure newCredits is an int
+    });
+    print("User credits updated successfully to $newCredits.");
+  } catch (e) {
+    print("Error updating user credits: $e");
   }
+}
+
 
 
   Future<void> logoutUser() async {

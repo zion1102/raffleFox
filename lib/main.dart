@@ -1,11 +1,10 @@
-import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:raffle_fox/config/firebase.dart';
 import 'package:raffle_fox/providers/nav_bar_provider.dart';
-import 'package:raffle_fox/services/notification_service.dart';
 import 'routes/app_routes.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -14,7 +13,6 @@ var globalMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
-
 
 Future<void> getDeviceToken() async {
   final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -85,7 +83,7 @@ void main() async {
   // Request notification permissions and initialize notifications
   await requestPermissions(); // Request permissions first
   await initializeNotifications(); // Initialize after permissions
-  
+ 
 await getDeviceToken();
   runApp(const MyApp());
 }

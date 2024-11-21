@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -28,9 +29,9 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
 
   DateTime? startDate;
   DateTime? endDate;
-  File? pictureFile;
-  File? editedGamePictureFile;
-  File? uneditedGamePictureFile;
+  File? pictureFile; // Primary Image
+  File? editedGamePictureFile; // Edited Game Image
+  File? uneditedGamePictureFile; // Unedited Game Image
 
   final RaffleService _raffleService = RaffleService();
   final FirebaseService _firebaseService = FirebaseService();
@@ -50,7 +51,6 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
   ];
   final List<String> tiers = ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4'];
 
-  // Updated price mappings for each category and tier
   final Map<String, Map<String, double>> priceMap = {
     'Lifestyle': {'Tier 1': 500.0, 'Tier 2': 1000.0, 'Tier 3': 1500.0, 'Tier 4': 2000.0},
     'Entertainment': {'Tier 1': 100.0, 'Tier 2': 300.0, 'Tier 3': 500.0, 'Tier 4': 700.0},
@@ -59,30 +59,56 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
     'Style': {'Tier 1': 50.0, 'Tier 2': 100.0, 'Tier 3': 150.0, 'Tier 4': 200.0},
     'Beauty & Grooming': {'Tier 1': 20.0, 'Tier 2': 50.0, 'Tier 3': 80.0, 'Tier 4': 100.0},
   };
-
+  
   Future<File?> compressImage(File file) async {
     final image = img.decodeImage(file.readAsBytesSync());
-    final resizedImage = img.copyResize(image!, width: 800);
+    if (image == null) return null;
+    final resizedImage = img.copyResize(image, width: 800);
     final compressedBytes = img.encodeJpg(resizedImage, quality: 80);
     final tempDir = await getTemporaryDirectory();
     final compressedFile = File('${tempDir.path}/compressed_image.jpg')..writeAsBytesSync(compressedBytes);
     return compressedFile;
   }
 
-  Future<void> _pickImage(bool isEditedImage, bool isPrimaryImage) async {
+  Future<void> _pickPrimaryImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      File? imageFile = File(pickedFile.path);
-      imageFile = await compressImage(imageFile);
-      setState(() {
-        if (isPrimaryImage) {
-          pictureFile = imageFile;
-        } else if (isEditedImage) {
-          editedGamePictureFile = imageFile;
-        } else {
-          uneditedGamePictureFile = imageFile;
-        }
-      });
+      File imageFile = File(pickedFile.path);
+      final compressedImage = await compressImage(imageFile);
+      if (compressedImage != null) {
+        setState(() {
+          pictureFile = compressedImage;
+        });
+        print("Primary image selected: ${compressedImage.path}");
+      }
+    }
+  }
+
+  Future<void> _pickEditedGameImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      File imageFile = File(pickedFile.path);
+      final compressedImage = await compressImage(imageFile);
+      if (compressedImage != null) {
+        setState(() {
+          editedGamePictureFile = compressedImage;
+        });
+        print("Edited game image selected: ${compressedImage.path}");
+      }
+    }
+  }
+
+  Future<void> _pickUneditedGameImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      File imageFile = File(pickedFile.path);
+      final compressedImage = await compressImage(imageFile);
+      if (compressedImage != null) {
+        setState(() {
+          uneditedGamePictureFile = compressedImage;
+        });
+        print("Unedited game image selected: ${compressedImage.path}");
+      }
     }
   }
 
@@ -189,51 +215,20 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
     );
   }
 
-  Future<void> _showConfirmationDialog() async {
-    if (selectedCategory != null && selectedTier != null && selectedPrice != null) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Confirm Raffle Creation'),
-          content: Text(
-              'You have selected:\nCategory: $selectedCategory\nTier: $selectedTier\nPrice per ticket: \$${selectedPrice!.toStringAsFixed(2)}\n\nDo you want to proceed?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _createRaffle();
-              },
-              child: const Text('Confirm'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      _showErrorDialog('Please select a category and tier before proceeding.');
-    }
-  }
-
-  void _createRaffle() async {
+  Future<void> _createRaffle() async {
     String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     try {
-      // Check if user is authorized
       String? userType = await _firebaseService.getUserType(uid);
 
       if (userType != 'creator') {
         throw Exception("You are not authorized to create a raffle.");
       }
 
-      // Show creation progress
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Creating raffle...')),
       );
 
-      // Upload images
       final primaryImageRef = _storage.ref().child('raffle_images/$uid/primary.jpg');
       await primaryImageRef.putFile(pictureFile!);
       final primaryImageUrl = await primaryImageRef.getDownloadURL();
@@ -255,7 +250,6 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
         detailThree: detail3Controller.text,
       );
 
-      // Success
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Raffle created successfully!')),
       );
@@ -316,7 +310,7 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
             const SizedBox(height: 16),
             const Text("Primary Raffle Image"),
             GestureDetector(
-              onTap: () => _pickImage(false, true),
+              onTap: _pickPrimaryImage,
               child: Container(
                 height: 150,
                 width: double.infinity,
@@ -344,7 +338,7 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
                     children: [
                       const Text("Edited Game Image"),
                       GestureDetector(
-                        onTap: () => _pickImage(true, false),
+                        onTap: _pickEditedGameImage,
                         child: Container(
                           height: 150,
                           decoration: BoxDecoration(
@@ -372,7 +366,7 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
                     children: [
                       const Text("Unedited Game Image"),
                       GestureDetector(
-                        onTap: () => _pickImage(false, false),
+                        onTap: _pickUneditedGameImage,
                         child: Container(
                           height: 150,
                           decoration: BoxDecoration(
@@ -520,8 +514,10 @@ class _CreateRaffleScreenState extends State<CreateRaffleScreen> {
             Center(
               child: ElevatedButton(
                 onPressed: () async {
+                  
                   if (_validateFields()) {
-                    _showConfirmationDialog();
+                     
+                    _createRaffle();
                   }
                 },
                 style: ElevatedButton.styleFrom(

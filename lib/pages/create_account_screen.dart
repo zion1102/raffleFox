@@ -8,7 +8,6 @@ import 'package:raffle_fox/services/firebase_services.dart';
 import 'package:raffle_fox/pages/onboard.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:flutter/services.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});

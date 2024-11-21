@@ -231,29 +231,33 @@ Future<void> _toggleLike() async {
                     const SizedBox(height: 20),
 
                     // Details Row using Column for text below icon
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: _buildDetailItemWithTextBelow(
-                              Icons.access_time, 
-                              widget.raffleData['detailOne'] ?? 'Detail 1'),
-                          ),
-                          Expanded(
-                            child: _buildDetailItemWithTextBelow(
-                              Icons.wb_sunny, 
-                              widget.raffleData['detailTwo'] ?? 'Detail 2'),
-                          ),
-                          Expanded(
-                            child: _buildDetailItemWithTextBelow(
-                              Icons.star_border, 
-                              widget.raffleData['detailThree'] ?? 'Detail 3'),
-                          ),
-                        ],
-                      ),
-                    ),
+                   Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 30.0),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Expanded(
+        child: _buildDetailItemWithTextBelow(
+          Icons.info, // Universal icon for detail one
+          widget.raffleData['detailOne'] ?? 'Detail 1',
+        ),
+      ),
+      Expanded(
+        child: _buildDetailItemWithTextBelow(
+          Icons.description, // Universal icon for detail two
+          widget.raffleData['detailTwo'] ?? 'Detail 2',
+        ),
+      ),
+      Expanded(
+        child: _buildDetailItemWithTextBelow(
+          Icons.more_horiz, // Universal icon for detail three
+          widget.raffleData['detailThree'] ?? 'Detail 3',
+        ),
+      ),
+    ],
+  ),
+),
+
                     const SizedBox(height: 30),
 
                     // Description Text
@@ -342,21 +346,30 @@ Future<void> _toggleLike() async {
   }
 
   // Helper to create detail items with text below the icon
-  Widget _buildDetailItemWithTextBelow(IconData icon, String text) {
-    return Column(
-      children: [
-        Icon(icon, size: 28, color: Colors.black),
-        const SizedBox(height: 5),
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Colors.black,
-          ),
+Widget _buildDetailItemWithTextBelow(IconData icon, String text) {
+  return Column(
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.1),
+          shape: BoxShape.circle,
         ),
-      ],
-    );
-  }
+        padding: const EdgeInsets.all(8),
+        child: Icon(icon, size: 28, color: Colors.black),
+      ),
+      const SizedBox(height: 5),
+      Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: Colors.black,
+        ),
+      ),
+    ],
+  );
+}
+
+
 }

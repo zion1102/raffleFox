@@ -61,7 +61,7 @@ class _TopRafflesState extends State<TopRaffles> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: raffles.map((raffle) => _buildRaffleSquare(context, raffle, squareSize)).toList(),
