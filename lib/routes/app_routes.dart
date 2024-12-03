@@ -30,7 +30,7 @@ class AppRoutes {
     onboardScreen: (context) => const OnboardingScreen(),
     shopScreen: (context) => const ShopScreen(),
     profileScreen: (context) => const UserProfileScreen(),
-    loginScreen: (context) => const LoginScreen(),
+    loginScreen: (context) =>  LoginScreen(),
     createRaffle: (context) => const CreateRaffleScreen(),
     searchScreen:(context) => const SearchScreen()
   };

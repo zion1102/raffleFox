@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:raffle_fox/pages/seeAllPage.dart';
 import 'package:raffle_fox/services/raffle_service.dart';
 import 'package:raffle_fox/pages/raffle_detail.dart';
 import 'package:raffle_fox/widgets/LatestRaffles.dart';
-
+import 'package:raffle_fox/widgets/TopRaffles.dart';
 
 class EndingSoon extends StatelessWidget {
   final Color titleColor;
@@ -23,9 +24,9 @@ class EndingSoon extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
-          return Container(); // Return empty if there is an error
+          return Container();
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Container(); // Return empty if there are no raffles
+          return Container();
         }
 
         List<Map<String, dynamic>> raffles = snapshot.data!;
@@ -35,7 +36,6 @@ class EndingSoon extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title and Timer
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -47,18 +47,31 @@ class EndingSoon extends StatelessWidget {
                       color: titleColor,
                     ),
                   ),
-                  const Icon(Icons.timer, color: Colors.black, size: 20),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SeeAllPage(
+                            pageTitle: 'Ending Soon',
+                            rafflesFuture: _fetchEndingSoonRaffles(),
+                            sortType: 'endingSoon',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Icon(Icons.timer, color: Colors.black, size: 20),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
-              // Grid of "Ending Soon" raffles
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: MediaQuery.of(context).size.width < 600 ? 2 : 3, // Responsive grid count
-                crossAxisSpacing: 10, // Reduced spacing for smaller cards
-                mainAxisSpacing: 10, // Reduced spacing for smaller cards
-                childAspectRatio: 0.8, // Adjusted aspect ratio for smaller cards
+                crossAxisCount: MediaQuery.of(context).size.width < 600 ? 2 : 3,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 0.8,
                 children: raffles.map((raffle) => buildEndingSoonItem(context, raffle)).toList(),
               ),
             ],
@@ -69,28 +82,32 @@ class EndingSoon extends StatelessWidget {
   }
 
   Widget buildEndingSoonItem(BuildContext context, Map<String, dynamic> raffle) {
-    DateTime expiryDate = (raffle['expiryDate'] is Timestamp)
+    final expiryDate = raffle['expiryDate'] is Timestamp
         ? (raffle['expiryDate'] as Timestamp).toDate()
-        : DateTime.parse(raffle['expiryDate']);
+        : raffle['expiryDate'];
 
     return GestureDetector(
       onTap: () {
-        // Navigate to the raffle detail screen when tapped
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => RaffleDetailScreen(raffleData: raffle),
+            builder: (context) => RaffleDetailScreen(
+              raffleData: {
+                ...raffle,
+                'expiryDate': expiryDate, // Pass normalized expiryDate
+              },
+            ),
           ),
         );
       },
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(7), // Reduced border radius for smaller cards
+          borderRadius: BorderRadius.circular(7),
           color: Colors.white,
           boxShadow: const [
             BoxShadow(
               color: Colors.black12,
-              blurRadius: 4, // Reduced blur radius for smaller cards
+              blurRadius: 4,
               offset: Offset(0, 2),
             ),
           ],
@@ -115,16 +132,16 @@ class EndingSoon extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 6), // Reduced spacing for smaller cards
+            const SizedBox(height: 6),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6.0), // Reduced padding for smaller cards
+              padding: const EdgeInsets.symmetric(horizontal: 6.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     raffle['title'] ?? 'No title',
                     style: const TextStyle(
-                      fontSize: 13, // Reduced font size for smaller cards
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                     maxLines: 1,
@@ -135,7 +152,7 @@ class EndingSoon extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 6), // Reduced spacing for smaller cards
+            const SizedBox(height: 6),
           ],
         ),
       ),

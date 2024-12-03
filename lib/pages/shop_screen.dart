@@ -29,9 +29,18 @@ class _ShopScreenState extends State<ShopScreen> {
   Future<void> _loadData() async {
     // Simulate loading data for each widget
     await Future.delayed(const Duration(seconds: 2)); // Simulate a network request
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshPage() async {
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
+    await _loadData();
   }
 
   @override
@@ -43,30 +52,33 @@ class _ShopScreenState extends State<ShopScreen> {
         body: Stack(
           children: [
             if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(),
-              )
+              const Center(child: CircularProgressIndicator())
             else
-              const SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: 70.0), // Avoid overlap with BottomNavBar
-                  child: Column(
-                    children: [
-                      MainBanner(),
-                      SizedBox(height: 35),
-                      SearchBarElement(),
-                      SizedBox(height: 35),
-                      TopRaffles(),
-                      SizedBox(height: 45),
-                      LatestRaffles(),
-                      SizedBox(height: 35),
-                      EndingSoon(),
-                      SizedBox(height: 35),
-                      MostPopular(),
-                      SizedBox(height: 35),
-                      YourFavorites(),
-                      CategoriesSection(),
-                    ],
+              RefreshIndicator(
+                onRefresh: _refreshPage, // Pull-to-refresh action
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(), // Ensure scrollable even if content fits
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 70.0), // Avoid overlap with BottomNavBar
+                    child: Column(
+                      children: const [
+                        MainBanner(),
+                        SizedBox(height: 35),
+                        SearchBarElement(),
+                        SizedBox(height: 35),
+                        TopRaffles(),
+                        SizedBox(height: 45),
+                        LatestRaffles(),
+                        SizedBox(height: 35),
+                        EndingSoon(),
+                        SizedBox(height: 35),
+                        MostPopular(),
+                        SizedBox(height: 35),
+                        YourFavorites(),
+                        SizedBox(height: 35),
+                        CategoriesSection(),
+                      ],
+                    ),
                   ),
                 ),
               ),

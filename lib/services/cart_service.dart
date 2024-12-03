@@ -1,9 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CartService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  Future<void> addGuessToCart({
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+Future<String?> getCurrentUserId() async {
+    final user = _auth.currentUser;
+    return user?.uid;
+  }  Future<void> addGuessToCart({
     required String raffleId,
     required String userId,
     required String raffleTitle,
@@ -43,6 +47,37 @@ class CartService {
 
     return total;
   }
+
+  Future<bool> deductCredits(String userId, double totalAmount) async {
+  try {
+    final userRef = _firestore.collection('users').doc(userId);
+
+    return await _firestore.runTransaction((transaction) async {
+      final userSnapshot = await transaction.get(userRef);
+
+      if (!userSnapshot.exists) {
+        throw Exception("User not found.");
+      }
+
+      double currentCredits = (userSnapshot['credits'] ?? 0).toDouble();
+
+      if (currentCredits < totalAmount) {
+        return false; // Insufficient credits
+      }
+
+      // Deduct credits
+      transaction.update(userRef, {
+        'credits': currentCredits - totalAmount,
+      });
+
+      return true; // Deduction successful
+    });
+  } catch (e) {
+    print("Error deducting credits: $e");
+    return false; // Transaction failed
+  }
+}
+
 
  // Function to transfer cart items to raffle_tickets and clear the cart upon checkout
 Future<void> checkoutCart(String userId) async {

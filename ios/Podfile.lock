@@ -1443,6 +1443,8 @@ PODS:
     - FlutterMacOS
   - url_launcher_ios (0.0.1):
     - Flutter
+  - workmanager (0.0.1):
+    - Flutter
 
 DEPENDENCIES:
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
@@ -1461,6 +1463,7 @@ DEPENDENCIES:
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - workmanager (from `.symlinks/plugins/workmanager/ios`)
 
 SPEC REPOS:
   trunk:
@@ -1524,6 +1527,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/sqflite_darwin/darwin"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
+  workmanager:
+    :path: ".symlinks/plugins/workmanager/ios"
 
 SPEC CHECKSUMS:
   abseil: d121da9ef7e2ff4cab7666e76c5a3e0915ae08c3
@@ -1568,6 +1573,7 @@ SPEC CHECKSUMS:
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
   sqflite_darwin: 5a7236e3b501866c1c9befc6771dfd73ffb8702d
   url_launcher_ios: 5334b05cef931de560670eeae103fd3e431ac3fe
+  workmanager: 0afdcf5628bbde6924c21af7836fed07b42e30e6
 
 PODFILE CHECKSUM: c586682b2ef1de8193f6b75c519d91b3747b4d0b
 

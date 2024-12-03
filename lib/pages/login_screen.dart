@@ -16,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailInputController = TextEditingController();
   final TextEditingController passwordInputController = TextEditingController();
   final FirebaseService _firebaseService = FirebaseService();
-
   bool _obscurePassword = true; // Controls password visibility
 
   @override
@@ -62,13 +61,54 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+  Widget _buildFormSection(BuildContext context) {
+    return AutofillGroup(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Column(
+          children: [
+            _buildEmailInput(context),
+            const SizedBox(height: 16),
+            _buildPasswordInput(context),
+            const SizedBox(height: 32),
+            _buildSubmitButton(context),
+            const SizedBox(height: 28),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const LandingPage(),
+                  ),
+                  (route) => false,
+                );
+              },
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                  fontFamily: 'Gotham',
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 Widget _buildEmailInput(BuildContext context) {
   return SizedBox(
     width: 334,
     child: TextFormField(
       controller: emailInputController,
-      autofillHints: const [AutofillHints.email], // Explicitly specify email hint
-      keyboardType: TextInputType.emailAddress, // Use email address keyboard
+      autofillHints: const [AutofillHints.email], // Enable autofill for email
+      keyboardType: TextInputType.emailAddress, // Email keyboard layout
+      textInputAction: TextInputAction.done, // Display "Done" button
+      enableSuggestions: true, // Enable text predictions
+      autocorrect: false, // Email doesn’t need autocorrect
       style: const TextStyle(
         color: Colors.black,
         fontSize: 14,
@@ -76,7 +116,7 @@ Widget _buildEmailInput(BuildContext context) {
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
-        hintText: "Email",
+        hintText: "Enter your email",
         hintStyle: const TextStyle(
           color: Color(0XFFD2D2D2),
           fontSize: 14,
@@ -91,53 +131,62 @@ Widget _buildEmailInput(BuildContext context) {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       ),
+      onFieldSubmitted: (value) {
+        // Handle submission when "Done" is pressed
+        FocusScope.of(context).unfocus(); // Dismiss the keyboard
+      },
     ),
   );
 }
 
-  Widget _buildPasswordInput(BuildContext context) {
-    return SizedBox(
-      width: 334,
-      child: TextFormField(
-        controller: passwordInputController,
-        obscureText: _obscurePassword,
-        autofillHints: const [AutofillHints.password], // Enable autofill for password
-        style: const TextStyle(
-          color: Colors.black,
+
+Widget _buildPasswordInput(BuildContext context) {
+  return SizedBox(
+    width: 334,
+    child: TextFormField(
+      controller: passwordInputController,
+      obscureText: _obscurePassword,
+      autofillHints: const [AutofillHints.password], // Enable autofill for password
+      keyboardType: TextInputType.text, // Use normal text keyboard for passwords
+      textInputAction: TextInputAction.done, // Submit on Enter
+      enableSuggestions: true, // Enable suggestions for passwords
+      autocorrect: false, // Disable autocorrect for passwords
+      style: const TextStyle(
+        color: Colors.black,
+        fontSize: 14,
+        fontFamily: 'Poppins',
+        fontWeight: FontWeight.w500,
+      ),
+      decoration: InputDecoration(
+        hintText: "Enter your password",
+        hintStyle: const TextStyle(
+          color: Color(0XFFD2D2D2),
           fontSize: 14,
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w500,
         ),
-        decoration: InputDecoration(
-          hintText: "Password",
-          hintStyle: const TextStyle(
-            color: Color(0XFFD2D2D2),
-            fontSize: 14,
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w500,
-          ),
-          fillColor: const Color(0XFFF8F8F8),
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(26),
-            borderSide: BorderSide.none,
-          ),
-          suffixIcon: IconButton(
-            icon: Icon(
-              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              color: Colors.grey,
-            ),
-            onPressed: () {
-              setState(() {
-                _obscurePassword = !_obscurePassword; // Toggle password visibility
-              });
-            },
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        fillColor: const Color(0XFFF8F8F8),
+        filled: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(26),
+          borderSide: BorderSide.none,
         ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword; // Toggle visibility
+            });
+          },
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSubmitButton(BuildContext context) {
     return SizedBox(
@@ -164,44 +213,6 @@ Widget _buildEmailInput(BuildContext context) {
     );
   }
 
- Widget _buildFormSection(BuildContext context) {
-  return AutofillGroup(
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Column(
-        children: [
-          _buildEmailInput(context),
-          const SizedBox(height: 16),
-          _buildPasswordInput(context),
-          const SizedBox(height: 32),
-          _buildSubmitButton(context),
-          const SizedBox(height: 28),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const LandingPage(),
-                ),
-                (route) => false,
-              );
-            },
-            child: const Text(
-              "Cancel",
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 15,
-                fontFamily: 'Gotham',
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
   void _loginUser() async {
     final email = emailInputController.text.trim();
     final password = passwordInputController.text.trim();
@@ -224,46 +235,29 @@ Widget _buildEmailInput(BuildContext context) {
     }
 
     try {
-      // Attempt login
       final UserCredential? userCredential =
           await _firebaseService.loginUser(email: email, password: password);
 
       final User? user = userCredential?.user;
 
       if (user != null) {
-        print("User logged in successfully: ${user.uid}");
-
-        // Fetch user type
         final userType = await _firebaseService.getUserType(user.uid);
-        print("User logged in with userType: $userType");
 
-        if (userType != null) {
-          // Navigate based on user type
-          if (userType == 'creator') {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const CreateRaffleScreen(),
-              ),
-              (route) => false,
-            );
-          } else if (userType == 'regular') {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const ShopScreen(),
-              ),
-              (route) => false,
-            );
-          } else {
-            throw Exception("Unknown user type: $userType");
-          }
-        } else {
-          throw Exception("Unable to determine user type.");
+        if (userType == 'creator') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const CreateRaffleScreen()),
+            (route) => false,
+          );
+        } else if (userType == 'regular') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const ShopScreen()),
+            (route) => false,
+          );
         }
       } else {
         throw Exception("Failed to log in user.");
       }
     } catch (e) {
-      print("Error logging in: $e");
       if (mounted) {
         showDialog(
           context: context,

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:raffle_fox/pages/raffle_detail.dart';
 import 'package:raffle_fox/services/firebase_services.dart';
@@ -28,10 +29,20 @@ class _MainBannerState extends State<MainBanner> {
       if (!mounted) return;
 
       setState(() {
-        recentRaffle = raffle ?? {
-          'title': 'No raffles available',
-          'picture': 'https://via.placeholder.com/370x160.png?text=No+raffles+available',
-        };
+        if (raffle != null) {
+          // Ensure the 'expiryDate' is converted to DateTime if it's a Timestamp
+          raffle['expiryDate'] = (raffle['expiryDate'] is Timestamp)
+              ? (raffle['expiryDate'] as Timestamp).toDate()
+              : raffle['expiryDate'];
+          recentRaffle = raffle;
+        } else {
+          // Fallback if no raffles are available
+          recentRaffle = {
+            'title': 'No raffles available',
+            'picture': 'https://via.placeholder.com/370x160.png?text=No+raffles+available',
+            'expiryDate': DateTime.now().add(const Duration(days: 7)), // Placeholder expiry date
+          };
+        }
       });
     } catch (e) {
       print("Error fetching recent raffle: $e");
@@ -40,6 +51,7 @@ class _MainBannerState extends State<MainBanner> {
           recentRaffle = {
             'title': 'Error loading raffle',
             'picture': 'https://via.placeholder.com/370x160.png?text=Error',
+            'expiryDate': DateTime.now(),
           };
         });
       }
@@ -66,6 +78,7 @@ class _MainBannerState extends State<MainBanner> {
           ),
           child: Stack(
             children: [
+              // Background Image
               Positioned(
                 left: 0,
                 top: 0,
@@ -81,6 +94,7 @@ class _MainBannerState extends State<MainBanner> {
                   ),
                 ),
               ),
+              // Play Now Button
               Positioned(
                 left: 10,
                 top: 180,
@@ -90,8 +104,9 @@ class _MainBannerState extends State<MainBanner> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              RaffleDetailScreen(raffleData: recentRaffle!),
+                          builder: (context) => RaffleDetailScreen(
+                            raffleData: recentRaffle!,
+                          ),
                         ),
                       );
                       print('Play Now button tapped');
@@ -128,6 +143,7 @@ class _MainBannerState extends State<MainBanner> {
                   ),
                 ),
               ),
+              // Title
               Positioned(
                 left: 22,
                 top: 20,
@@ -142,6 +158,7 @@ class _MainBannerState extends State<MainBanner> {
                   ),
                 ),
               ),
+              // Footer Text
               const Positioned(
                 right: 10,
                 bottom: 10,

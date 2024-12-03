@@ -2,6 +2,7 @@ import UIKit
 import Flutter
 import FirebaseCore
 import FirebaseMessaging
+import BackgroundTasks
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -10,9 +11,11 @@ import FirebaseMessaging
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Initialize Firebase
     FirebaseApp.configure()
     GeneratedPluginRegistrant.register(with: self)
     
+    // Register for notifications
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
       let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
@@ -30,8 +33,17 @@ import FirebaseMessaging
     
     application.registerForRemoteNotifications()
 
+    // Set Messaging delegate
     Messaging.messaging().delegate = self
     
+    // Register background task
+    BGTaskScheduler.shared.register(
+      forTaskWithIdentifier: "com.example.raffle-Fox.backgroundtask",
+      using: nil
+    ) { task in
+      self.handleBackgroundTask(task: task)
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
   
@@ -39,6 +51,12 @@ import FirebaseMessaging
   override func application(_ application: UIApplication,
                             didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     Messaging.messaging().apnsToken = deviceToken
+  }
+  
+  private func handleBackgroundTask(task: BGTask) {
+    // Perform background processing here
+    print("Handling background task: \(task.identifier)")
+    task.setTaskCompleted(success: true)
   }
 }
 

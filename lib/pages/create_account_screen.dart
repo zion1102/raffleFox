@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:country_code_picker/country_code_picker.dart';
+import 'package:raffle_fox/blocs/account/account_bloc.dart';
 import 'package:raffle_fox/services/firebase_services.dart';
 import 'package:raffle_fox/pages/onboard.dart';
 import 'package:geolocator/geolocator.dart';
@@ -106,39 +108,46 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     return _isPasswordValid;
   }
 
-  Future<void> _createUser() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
+  void _createUser(BuildContext context) {
+    final email = emailInputController.text.trim();
+    final password = passwordInputController.text.trim();
+    final confirmPassword = confirmPasswordInputController.text.trim();
+    final name = nameInputController.text.trim();
+    final phone = phoneNumberInputController.text.trim();
+    final age = selectedDateOfBirth == null
+        ? 0
+        : DateTime.now().year - selectedDateOfBirth!.year;
 
-    try {
-      final user = await _firebaseService.createUser(
-        email: emailInputController.text.trim(),
-        password: passwordInputController.text.trim(),
-        name: nameInputController.text,
-        phone: countryCode + phoneNumberInputController.text.trim(),
-        age: selectedDateOfBirth == null ? 0 : DateTime.now().year - selectedDateOfBirth!.year,
-        userType: "regular",
-        profilePicture: _selectedImage,
+    // Validate form fields
+    if (email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty ||
+        name.isEmpty ||
+        phone.isEmpty ||
+        selectedDateOfBirth == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields.")),
       );
-
-      Navigator.of(context).pop();
-
-      if (user != null) {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const OnboardingScreen()));
-      } else {
-        _showErrorDialog("Account creation failed. Please try again.");
-      }
-    } catch (e) {
-      Navigator.of(context).pop();
-      _showErrorDialog(e.toString());
+      return;
     }
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match.")),
+      );
+      return;
+    }
+
+    // Dispatch BLoC event for account creation
+    BlocProvider.of<AccountBloc>(context).add(CreateAccountEvent(
+      email: email,
+      password: password,
+      name: name,
+      phone: "$countryCode$phone",
+      age: age,
+      userType: "regular",
+      profilePicture: _selectedImage,
+    ));
   }
 
   void _showErrorDialog(String message) {
@@ -159,42 +168,66 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+ @override
+Widget build(BuildContext context) {
+  final size = MediaQuery.of(context).size;
 
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
+  return BlocProvider(
+    create: (context) => AccountBloc(FirebaseService()),
+    child: BlocConsumer<AccountBloc, AccountState>(
+      listener: (context, state) {
+        if (state is AccountCreated) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          );
+        } else if (state is AccountError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0XFFFFFFFF),
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                "assets/images/img_image_15.png",
-                fit: BoxFit.cover,
+      builder: (context, state) {
+        if (state is AccountLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return _buildMainContent(context, size); // Separate the form UI into a method
+      },
+    ),
+  );
+}
+Widget _buildMainContent(BuildContext context, Size size) {
+  return GestureDetector(
+    onTap: () => FocusScope.of(context).unfocus(),
+    child: Scaffold(
+      backgroundColor: const Color(0XFFFFFFFF),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              "assets/images/img_image_15.png",
+              fit: BoxFit.cover,
+            ),
+          ),
+          SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
+              child: Column(
+                children: [
+                  _buildProfileSection(context, size),
+                  SizedBox(height: size.height * 0.04),
+                  _buildFormSection(context, size),
+                  SizedBox(height: size.height * 0.02),
+                ],
               ),
             ),
-            SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
-                child: Column(
-                  children: [
-                    _buildProfileSection(context, size),
-                    SizedBox(height: size.height * 0.04),
-                    _buildFormSection(context, size),
-                    SizedBox(height: size.height * 0.02),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildProfileSection(BuildContext context, Size size) {
     return SizedBox(
@@ -266,7 +299,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         SizedBox(height: size.height * 0.02),
         _buildPhoneNumberInput(),
         SizedBox(height: size.height * 0.03),
-        _buildSubmitButton(),
+        _buildSubmitButton(context),
+
       ],
     ),
   );
@@ -446,30 +480,31 @@ Widget _buildPhoneNumberInput() {
     ],
   );
 }
-  Widget _buildSubmitButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0XFFF15B29),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        onPressed: _createUser,
-        child: const Text(
-          "Done",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontFamily: 'Gibson',
-            fontWeight: FontWeight.w700,
-          ),
+ Widget _buildSubmitButton(BuildContext context) {
+  return SizedBox(
+    width: double.infinity,
+    height: 60,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0XFFF15B29),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
-    );
-  }
+      onPressed: () => _createUser(context),
+      child: const Text(
+        "Done",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 22,
+          fontFamily: 'Gibson',
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+  );
+}
+
 
   Widget _buildTextField({
   required TextEditingController controller,

@@ -153,7 +153,7 @@ class RaffleService {
           .orderBy('expiryDate')
           .limit(6)
           .get();
-
+   
       return querySnapshot.docs
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList();
@@ -263,61 +263,42 @@ Future<Map<String, List<Map<String, dynamic>>>> getRafflesByCategories(List<Stri
 
 Future<List<Map<String, dynamic>>> getRaffleTicketsForUser(String userId) async {
   try {
+    print("Fetching raffle tickets for userId: $userId");
+
     QuerySnapshot ticketSnapshot = await _firestore
         .collection('raffle_tickets')
         .where('userId', isEqualTo: userId)
         .get();
 
+    print("Raffle tickets fetched: ${ticketSnapshot.docs.length}");
+
     List<Map<String, dynamic>> tickets = [];
 
-    Map<String, Map<String, dynamic>> ticketMap = {};
-
     for (var doc in ticketSnapshot.docs) {
-      var ticketData = doc.data() as Map<String, dynamic>;
-      String raffleId = ticketData['raffleId'];
+      Map<String, dynamic> ticketData = doc.data() as Map<String, dynamic>;
+      print("Fetched ticket: ${ticketData['raffleId']} - ${ticketData['raffleTitle']}");
 
-      // If either title or expiryDate is missing, fetch from raffles collection
-      if (ticketData['title'] == null || ticketData['expiryDate'] == null) {
-        DocumentSnapshot raffleDoc = await _firestore.collection('raffles').doc(raffleId).get();
-        
-        if (raffleDoc.exists) {
-          var raffleData = raffleDoc.data() as Map<String, dynamic>;
-
-          // Populate missing fields from the raffles document
-          ticketData['title'] = raffleData['title'];
-          ticketData['expiryDate'] = raffleData['expiryDate'];
-        }
-      }
-
-      // If `expiryDate` is still null, log and skip this ticket
-      if (ticketData['expiryDate'] == null) {
-        print("Skipping ticket for raffle $raffleId due to missing expiryDate.");
+      // Additional checks for missing or null data
+      if (ticketData['raffleId'] == null || ticketData['expiryDate'] == null) {
+        print("Skipping ticket due to missing raffleId or expiryDate.");
         continue;
       }
 
-      // Convert `expiryDate` to DateTime if it's a Timestamp
+      // Convert expiryDate if necessary
       if (ticketData['expiryDate'] is Timestamp) {
         ticketData['expiryDate'] = (ticketData['expiryDate'] as Timestamp).toDate();
       }
 
-      // Increment guess count if this raffleId exists in the map
-      if (ticketMap.containsKey(raffleId)) {
-        ticketMap[raffleId]!['guessCount'] += 1;
-      } else {
-        ticketData['guessCount'] = 1;
-        ticketMap[raffleId] = ticketData;
-      }
+      tickets.add(ticketData);
     }
 
-    // Convert the map values back to a list for easier usage
-    tickets = ticketMap.values.toList();
+    print("Processed raffle tickets: ${tickets.length}");
     return tickets;
   } catch (e) {
     print("Error fetching raffle tickets: $e");
     return [];
   }
 }
-
 
 
 Future<List<Map<String, dynamic>>> getCartTickets(String userId) async {

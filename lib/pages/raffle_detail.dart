@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:palette_generator/palette_generator.dart';
+import 'package:raffle_fox/blocs/raffle/raffle_bloc.dart';
+import 'package:raffle_fox/blocs/guess/guess_bloc.dart';
 import 'package:raffle_fox/pages/game_screen.dart';
 import 'package:raffle_fox/widgets/BottomNavBar.dart';
 import 'package:raffle_fox/widgets/ProfileAppBar.dart';
@@ -16,95 +19,161 @@ class RaffleDetailScreen extends StatefulWidget {
   _RaffleDetailScreenState createState() => _RaffleDetailScreenState();
 }
 
-class _RaffleDetailScreenState extends State<RaffleDetailScreen> {
+class _RaffleDetailScreenState extends State<RaffleDetailScreen> with SingleTickerProviderStateMixin {
   late Timer _timer;
   Duration _timeLeft = const Duration();
-  bool isLiked = false; // Track if the user has liked the raffle
+  bool isLiked = false;
+  bool isLoadingLike = false;
+  late AnimationController _animationController;
+  Color _heartOutlineColor = Colors.black; // Default heart outline color
 
   @override
   void initState() {
     super.initState();
     _startCountdown();
-    _checkIfLiked(); // Check if the raffle is liked by the current user
+    _checkIfLiked();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _determineHeartOutlineColor();
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _animationController.dispose();
+    super.dispose();
   }
 
   void _startCountdown() {
-    DateTime expiryDate = widget.raffleData['expiryDate'].toDate(); // Convert from Firebase timestamp
-    DateTime now = DateTime.now();
-    if (expiryDate.isAfter(now)) {
-      _timeLeft = expiryDate.difference(now);
+  final expiryDate = widget.raffleData['expiryDate']; // Already normalized to DateTime
+  DateTime now = DateTime.now();
+  if (expiryDate.isAfter(now)) {
+    _timeLeft = expiryDate.difference(now);
 
-      // Update the timer every second
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_timeLeft.inSeconds > 0) {
-          setState(() {
-            _timeLeft = _timeLeft - const Duration(seconds: 1);
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_timeLeft.inSeconds > 0) {
+        setState(() {
+          _timeLeft = _timeLeft - const Duration(seconds: 1);
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+}
+
+
+  Future<void> _checkIfLiked() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final raffleId = widget.raffleData['raffleId'];
+
+    if (user == null || raffleId == null) {
+      print("Error: User or raffleId is null in _checkIfLiked");
+      return;
+    }
+
+    final likeDoc = await FirebaseFirestore.instance
+        .collection('userLikes')
+        .doc('${user.uid}_$raffleId')
+        .get();
+
+    setState(() {
+      isLiked = likeDoc.exists;
+    });
+  }
+
+  Future<void> _toggleLike() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final raffleId = widget.raffleData['raffleId'];
+
+    if (user == null || raffleId == null) {
+      print("Error: User or raffleId is null in _toggleLike");
+      return;
+    }
+
+    setState(() {
+      isLoadingLike = true;
+    });
+
+    try {
+      final likeRef = FirebaseFirestore.instance.collection('userLikes').doc('${user.uid}_$raffleId');
+      final raffleRef = FirebaseFirestore.instance.collection('raffles').doc(raffleId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final raffleSnapshot = await transaction.get(raffleRef);
+
+        if (!raffleSnapshot.exists) {
+          throw Exception("Raffle not found");
+        }
+
+        if (isLiked) {
+          transaction.delete(likeRef);
+          transaction.update(raffleRef, {
+            'likes': (raffleSnapshot['likes'] ?? 0) - 1,
           });
         } else {
-          timer.cancel();
+          transaction.set(likeRef, {
+            'raffleId': raffleId,
+            'userId': user.uid,
+            'timestamp': FieldValue.serverTimestamp(),
+            'expiryDate': widget.raffleData['expiryDate'],
+            'title': widget.raffleData['title'],
+            'imageUrl': widget.raffleData['picture'],
+          });
+          transaction.update(raffleRef, {
+            'likes': (raffleSnapshot['likes'] ?? 0) + 1,
+          });
         }
+      });
+
+      setState(() {
+        isLiked = !isLiked;
+      });
+
+      if (isLiked) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    } catch (e) {
+      print("Error toggling like: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to update like status")),
+      );
+    } finally {
+      setState(() {
+        isLoadingLike = false;
       });
     }
   }
 
- Future<void> _checkIfLiked() async {
-  final user = FirebaseAuth.instance.currentUser;
-  final raffleId = widget.raffleData['raffleId'];
+  Future<void> _determineHeartOutlineColor() async {
+    try {
+      final paletteGenerator = await PaletteGenerator.fromImageProvider(
+        NetworkImage(widget.raffleData['picture']),
+        size: const Size(100, 100), // Sample a smaller area for efficiency
+      );
 
-  if (user == null || raffleId == null) {
-    print("Error: raffleId is null in _checkIfLiked");
-    return;
+      final dominantColor = paletteGenerator.dominantColor?.color ?? Colors.black;
+
+      setState(() {
+        _heartOutlineColor = _isColorBright(dominantColor) ? Colors.black : Colors.white;
+      });
+    } catch (e) {
+      print("Error determining heart outline color: $e");
+      setState(() {
+        _heartOutlineColor = Colors.black; // Default to black on failure
+      });
+    }
   }
 
-  final likeDoc = await FirebaseFirestore.instance
-      .collection('userLikes')
-      .doc('${user.uid}_$raffleId')
-      .get();
-
-  setState(() {
-    isLiked = likeDoc.exists;
-  });
-}
-
-Future<void> _toggleLike() async {
-  final user = FirebaseAuth.instance.currentUser;
-  final raffleId = widget.raffleData['raffleId'];
-
-  if (user == null || raffleId == null) {
-    print("Error: raffleId is null in _toggleLike");
-    return;
+  bool _isColorBright(Color color) {
+    final brightness = (color.red * 299 + color.green * 587 + color.blue * 114) / 1000;
+    return brightness > 128; // Bright if perceived brightness > 128
   }
 
-  final likeRef = FirebaseFirestore.instance.collection('userLikes').doc('${user.uid}_$raffleId');
-
-  if (isLiked) {
-    await likeRef.delete();
-    print("Like removed for raffleId: $raffleId");
-  } else {
-    await likeRef.set({
-      'raffleId': raffleId,
-      'userId': user.uid,
-      'timestamp': FieldValue.serverTimestamp(),
-      'expiryDate': widget.raffleData['expiryDate'],
-      'title': widget.raffleData['title'],
-      'imageUrl': widget.raffleData['picture'],
-    });
-    print("Like added for raffleId: $raffleId");
-  }
-
-  setState(() {
-    isLiked = !isLiked;
-  });
-}
-
-
-  @override
-  void dispose() {
-    _timer.cancel(); // Make sure to cancel the timer to avoid memory leaks
-    super.dispose();
-  }
-
-  // Helper function to format the time dynamically
   String _formatTime(Duration duration) {
     if (duration.inHours >= 48) {
       int days = duration.inDays;
@@ -121,213 +190,202 @@ Future<void> _toggleLike() async {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const ProfileAppBar(),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image and Heart Icon
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            height: 300,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: const Color(0xff222222),
-                              image: DecorationImage(
-                                image: NetworkImage(widget.raffleData['picture']),
-                                fit: BoxFit.cover,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: 8,
-                                  offset: Offset(0, 4),
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    return BlocProvider(
+      create: (context) => RaffleBloc(firestore: FirebaseFirestore.instance)
+        ..add(LoadRaffleStatus(widget.raffleData['raffleId'], userId)),
+      child: Scaffold(
+        appBar: const ProfileAppBar(),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Image and Heart Icon
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              height: 300,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: const Color(0xff222222),
+                                image: DecorationImage(
+                                  image: NetworkImage(widget.raffleData['picture']),
+                                  fit: BoxFit.cover,
                                 ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              top: 16,
+                              right: 16,
+                              child: GestureDetector(
+                                onTap: isLoadingLike ? null : _toggleLike,
+                                child: AnimatedBuilder(
+                                  animation: _animationController,
+                                  builder: (context, child) {
+                                    return Transform.scale(
+                                      scale: 1.0 + (_animationController.value * 0.2),
+                                      child: Icon(
+                                        isLiked ? Icons.favorite : Icons.favorite_border,
+                                        color: isLiked ? Colors.red : _heartOutlineColor,
+                                        size: 40,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+
+                      // Title and Timer
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.raffleData['title'],
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.4,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.timer, color: Colors.black, size: 24),
+                                const SizedBox(width: 10),
+                                _buildTimerBox(_formatTime(_timeLeft)),
                               ],
                             ),
-                          ),
-                          Positioned(
-                            top: 16,
-                            right: 16,
-                            child: GestureDetector(
-                              onTap: _toggleLike, // Toggle like status on tap
-                              child: SvgPicture.asset(
-                                'assets/images/vector.svg',
-                                width: 40,
-                                height: 40,
-                                color: isLiked ? Colors.red : Colors.white, // Change color based on like status
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Details Row
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: _buildDetailItemWithTextBelow(
+                                Icons.info,
+                                widget.raffleData['detailOne'] ?? 'Detail 1',
                               ),
                             ),
+                            Expanded(
+                              child: _buildDetailItemWithTextBelow(
+                                Icons.description,
+                                widget.raffleData['detailTwo'] ?? 'Detail 2',
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildDetailItemWithTextBelow(
+                                Icons.more_horiz,
+                                widget.raffleData['detailThree'] ?? 'Detail 3',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+
+                      // Description Text
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                        child: Text(
+                          widget.raffleData['description'] ?? 'No description available.',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black,
                           ),
-                          Positioned(
-                            bottom: 16,
-                            left: 16,
-                            child: ElevatedButton.icon(
+                        ),
+                      ),
+                      const Spacer(),
+
+                      // Total and Enter Button
+                      Padding(
+                        padding: const EdgeInsets.all(30.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total: \$${widget.raffleData['costPer'].toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                            ElevatedButton(
                               onPressed: () {
-                                // View Video button action
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BlocProvider(
+                                      create: (_) => GuessBloc(),
+                                      child: PickSpotScreen(raffleData: widget.raffleData),
+                                    ),
+                                  ),
+                                );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF9500),
+                                backgroundColor: const Color(0xFFF15B29),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                               ),
-                              icon: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
-                              label: const Text(
-                                'View Video',
+                              child: const Text(
+                                'Enter Now',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-
-                    // Title and Timer
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.raffleData['title'],
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                height: 1.4,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.timer, color: Colors.black, size: 24),
-                              const SizedBox(width: 10),
-                              _buildTimerBox(_formatTime(_timeLeft)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Details Row using Column for text below icon
-                   Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 30.0),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Expanded(
-        child: _buildDetailItemWithTextBelow(
-          Icons.info, // Universal icon for detail one
-          widget.raffleData['detailOne'] ?? 'Detail 1',
-        ),
-      ),
-      Expanded(
-        child: _buildDetailItemWithTextBelow(
-          Icons.description, // Universal icon for detail two
-          widget.raffleData['detailTwo'] ?? 'Detail 2',
-        ),
-      ),
-      Expanded(
-        child: _buildDetailItemWithTextBelow(
-          Icons.more_horiz, // Universal icon for detail three
-          widget.raffleData['detailThree'] ?? 'Detail 3',
-        ),
-      ),
-    ],
-  ),
-),
-
-                    const SizedBox(height: 30),
-
-                    // Description Text
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                      child: Text(
-                        widget.raffleData['description'] ?? 'No description available.',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.black,
+                          ],
                         ),
                       ),
-                    ),
-                    const Spacer(),
-
-                    // Total and Enter Button
-                    Padding(
-                      padding: const EdgeInsets.all(30.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total: \$${widget.raffleData['costPer'].toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PickSpotScreen(raffleData: widget.raffleData),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF15B29),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            ),
-                            child: const Text(
-                              'Enter Now',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
+        bottomNavigationBar: const BottomNavBar(),
       ),
-      bottomNavigationBar: const BottomNavBar(),
     );
   }
 
-  // Helper to create a timer box
   Widget _buildTimerBox(String time) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -345,31 +403,28 @@ Future<void> _toggleLike() async {
     );
   }
 
-  // Helper to create detail items with text below the icon
-Widget _buildDetailItemWithTextBelow(IconData icon, String text) {
-  return Column(
-    children: [
-      Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
-          shape: BoxShape.circle,
+  Widget _buildDetailItemWithTextBelow(IconData icon, String text) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, size: 28, color: Colors.black),
         ),
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, size: 28, color: Colors.black),
-      ),
-      const SizedBox(height: 5),
-      Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          color: Colors.black,
+        const SizedBox(height: 5),
+        Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Colors.black,
+          ),
         ),
-      ),
-    ],
-  );
-}
-
-
+      ],
+    );
+  }
 }

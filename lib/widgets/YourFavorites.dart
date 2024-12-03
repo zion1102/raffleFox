@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:raffle_fox/pages/raffle_detail.dart';
 import 'package:raffle_fox/services/firebase_services.dart';
-import 'package:raffle_fox/widgets/LatestRaffles.dart';
-
+import 'package:raffle_fox/widgets/TopRaffles.dart';
 
 class YourFavorites extends StatefulWidget {
   const YourFavorites({super.key});
@@ -16,6 +15,8 @@ class YourFavorites extends StatefulWidget {
 class _YourFavoritesState extends State<YourFavorites> {
   final FirebaseService _firebaseService = FirebaseService();
   List<Map<String, dynamic>> recentLikedRaffles = [];
+  bool isLoading = true;
+  String errorMessage = "";
 
   @override
   void initState() {
@@ -24,26 +25,44 @@ class _YourFavoritesState extends State<YourFavorites> {
   }
 
   Future<void> _fetchRecentLikedRaffles() async {
-    List<Map<String, dynamic>> likedRaffles = await _firebaseService.getRecentLikedRaffles();
-    setState(() {
-      recentLikedRaffles = likedRaffles;
-    });
+    try {
+      List<Map<String, dynamic>> likedRaffles = await _firebaseService.getRecentLikedRaffles();
+      setState(() {
+        recentLikedRaffles = likedRaffles;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = "Error fetching liked raffles: $e";
+        isLoading = false;
+      });
+      print(errorMessage);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (errorMessage.isNotEmpty) {
+      return Center(child: Text(errorMessage));
+    }
+
+    if (recentLikedRaffles.isEmpty) {
+      return const Center(child: Text("You haven't liked any raffles yet."));
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and star icon
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              recentLikedRaffles.isEmpty
-              ? const Center(child: Text(""))
-              : const Text(
+              const Text(
                 'Your Favorites',
                 style: TextStyle(
                   fontSize: 21,
@@ -51,9 +70,7 @@ class _YourFavoritesState extends State<YourFavorites> {
                   color: Color(0xFFF15B29),
                 ),
               ),
-              recentLikedRaffles.isEmpty
-              ? const Center(child: Text(""))
-              :SvgPicture.asset(
+              SvgPicture.asset(
                 'assets/images/star.svg',
                 width: 19,
                 height: 18.3,
@@ -61,49 +78,46 @@ class _YourFavoritesState extends State<YourFavorites> {
             ],
           ),
           const SizedBox(height: 20),
-          // Display the liked raffles
-          recentLikedRaffles.isEmpty
-              ? const Center(child: Text(""))
-              : Center(
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: MediaQuery.of(context).size.width < 600 ? 2 : 3, // Responsive grid count
-                      childAspectRatio: 1 / 1.4,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: recentLikedRaffles.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () {
-                          // Navigate to the raffle detail screen with the selected raffle data
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RaffleDetailScreen(
-                                raffleData: recentLikedRaffles[index],
-                              ),
-                            ),
-                          );
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: MediaQuery.of(context).size.width < 600 ? 2 : 3,
+              childAspectRatio: 1 / 1.4,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: recentLikedRaffles.length,
+            itemBuilder: (context, index) {
+              final raffle = recentLikedRaffles[index];
+              final expiryDate = raffle['expiryDate'] is Timestamp
+                  ? (raffle['expiryDate'] as Timestamp).toDate()
+                  : raffle['expiryDate'];
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RaffleDetailScreen(
+                        raffleData: {
+                          ...raffle,
+                          'expiryDate': expiryDate,
                         },
-                        child: buildFavoriteCard(recentLikedRaffles[index]),
-                      );
-                    },
-                  ),
-                ),
+                      ),
+                    ),
+                  );
+                },
+                child: buildFavoriteCard(raffle, expiryDate),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  // Helper method to build each favorite card
-  Widget buildFavoriteCard(Map<String, dynamic> raffle) {
-    DateTime expiryDate = (raffle['expiryDate'] is Timestamp)
-        ? (raffle['expiryDate'] as Timestamp).toDate()
-        : DateTime.parse(raffle['expiryDate']);
-
+  Widget buildFavoriteCard(Map<String, dynamic> raffle, DateTime expiryDate) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -124,10 +138,10 @@ class _YourFavoritesState extends State<YourFavorites> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: Image.network(
-              raffle['picture'] ?? 'https://via.placeholder.com/370x160.png/cccccc/ffffff?text=No+raffles+availablez',
+              raffle['picture'] ?? 'https://via.placeholder.com/370x160.png/cccccc/ffffff?text=No+Image',
               fit: BoxFit.cover,
               width: double.infinity,
-              height: MediaQuery.of(context).size.width < 600 ? 140 : 160, // Adjust height based on screen size
+              height: MediaQuery.of(context).size.width < 600 ? 140 : 160,
             ),
           ),
         ),

@@ -41,47 +41,38 @@ class RaffleTicketService {
 
 
   // Function to get all raffle tickets for the user
-  Future<List<Map<String, dynamic>>> getRaffleTicketsForUser(String userId) async {
-    try {
-      // Query the `raffle_tickets` collection where `userId` matches the current user
-      QuerySnapshot ticketSnapshot = await _firestore
-          .collection('raffle_tickets')
-          .where('userId', isEqualTo: userId)
-          .get();
+Future<List<Map<String, dynamic>>> getRaffleTicketsForUser(String userId) async {
+  try {
+    QuerySnapshot ticketSnapshot = await _firestore
+        .collection('raffle_tickets')
+        .where('userId', isEqualTo: userId)
+        .get();
 
-      List<Map<String, dynamic>> tickets = [];
+    print("Fetching raffle tickets for userId: $userId");
 
-      // Temporary map to hold guess counts by raffleId
-      Map<String, Map<String, dynamic>> ticketMap = {};
+    return ticketSnapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
 
-      for (var doc in ticketSnapshot.docs) {
-        var ticketData = doc.data() as Map<String, dynamic>;
-        String raffleId = ticketData['raffleId'];
-
-        // If the raffleId is already in the map, increment the guess count
-        if (ticketMap.containsKey(raffleId)) {
-          ticketMap[raffleId]!['guessCount'] += 1;
-        } else {
-          // Otherwise, add the raffle ticket to the map with guessCount initialized to 1
-          ticketData['guessCount'] = 1;
-          ticketMap[raffleId] = ticketData;
-        }
-      }
-
-      // Convert the map values back to a list for easier usage
-      tickets = ticketMap.values.toList();
-
-      return tickets;
-    } catch (e) {
-      print("Error fetching raffle tickets: $e");
-      return [];
-    }
+      // Normalize field names
+      return {
+        'raffleId': data['raffleId'],
+        'expiryDate': data['expiryDate'] ?? data['raffleExpiryDate'],
+        'raffleTitle': data['raffleTitle'],
+        'guessCount': data['guessCount'] ?? 0,
+        'totalPrice': data['price'] ?? 0.0,
+      };
+    }).toList();
+  } catch (e) {
+    print("Error fetching raffle tickets: $e");
+    return [];
   }
-
-
+}
 
   // Function to check if the user has enough credits
-  Future<bool> hasEnoughCredits(int totalGuesses, int userCredits, double costPerGuess) async {
-    return (userCredits >= totalGuesses * costPerGuess);
-  }
+ Future<bool> hasEnoughCredits(int totalGuesses, int userCredits, double costPerGuess) async {
+  // Safely calculate
+  return userCredits >= (totalGuesses * costPerGuess).ceil();
+}
+
+
 }

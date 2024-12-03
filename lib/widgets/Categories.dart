@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:raffle_fox/pages/seeAllPage.dart';
+
 import 'package:raffle_fox/services/raffle_service.dart';
 
 class CategoriesSection extends StatefulWidget {
@@ -35,7 +37,7 @@ class _CategoriesSectionState extends State<CategoriesSection> {
         } else if (snapshot.hasError) {
           return const Center(child: Text('Error loading categories'));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text(''));
+          return const Center(child: Text('No categories available'));
         }
 
         Map<String, List<Map<String, dynamic>>> rafflesByCategory = snapshot.data!;
@@ -63,7 +65,22 @@ class _CategoriesSectionState extends State<CategoriesSection> {
                 mainAxisSpacing: 20,
                 childAspectRatio: 162.04 / 205,
                 children: rafflesByCategory.entries.map((entry) {
-                  return buildCategoryCard(entry.key, entry.value);
+                  return GestureDetector(
+                    onTap: () {
+                      // Navigate to SeeAllPage with the raffles of the selected category
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SeeAllPage(
+                            pageTitle: entry.key,
+                            rafflesFuture: Future.value(entry.value),
+                            sortType: 'latest', // Optional, can adjust the sort type
+                          ),
+                        ),
+                      );
+                    },
+                    child: buildCategoryCard(entry.key, entry.value),
+                  );
                 }).toList(),
               ),
             ],
@@ -98,7 +115,9 @@ class _CategoriesSectionState extends State<CategoriesSection> {
               children: [
                 Expanded(
                   child: GridView.builder(
-                    itemCount: raffles.length,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: raffles.length > 4 ? 4 : raffles.length,
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisSpacing: 4,

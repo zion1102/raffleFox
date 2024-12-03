@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:raffle_fox/pages/seeAllPage.dart';
 import 'package:raffle_fox/services/raffle_service.dart';
 import 'package:raffle_fox/pages/raffle_detail.dart';
-import 'package:raffle_fox/widgets/LatestRaffles.dart';
-
+import 'package:raffle_fox/widgets/TopRaffles.dart';
 
 class MostPopular extends StatelessWidget {
   const MostPopular({super.key});
@@ -45,23 +45,37 @@ class MostPopular extends StatelessWidget {
                       color: Color(0xFFF15B29),
                     ),
                   ),
-                  Row(
-                    children: [
-                      const Text(
-                        'See All',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF202020),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SeeAllPage(
+                            pageTitle: 'Most Popular',
+                            rafflesFuture: _fetchMostPopularRaffles(),
+                            sortType: 'mostPopular',
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 5),
-                      SvgPicture.asset(
-                        'assets/images/Button.svg',
-                        width: 16,
-                        height: 16,
-                      ),
-                    ],
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        const Text(
+                          'See All',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF202020),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        SvgPicture.asset(
+                          'assets/images/Button.svg',
+                          width: 16,
+                          height: 16,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -71,7 +85,28 @@ class MostPopular extends StatelessWidget {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: raffles.map((raffle) => buildMostPopularCard(context, raffle)).toList(),
+                    children: raffles.map((raffle) {
+                      final expiryDate = raffle['expiryDate'] is Timestamp
+                          ? (raffle['expiryDate'] as Timestamp).toDate()
+                          : raffle['expiryDate'];
+
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RaffleDetailScreen(
+                                raffleData: {
+                                  ...raffle,
+                                  'expiryDate': expiryDate,
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: buildMostPopularCard(raffle, expiryDate),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
@@ -82,87 +117,69 @@ class MostPopular extends StatelessWidget {
     );
   }
 
-  // Helper method to build each "Most Popular" card
-  Widget buildMostPopularCard(BuildContext context, Map<String, dynamic> raffle) {
-    DateTime expiryDate = (raffle['expiryDate'] is Timestamp)
-        ? (raffle['expiryDate'] as Timestamp).toDate()
-        : DateTime.parse(raffle['expiryDate']);
-
-    return GestureDetector(
-      onTap: () {
-        // Navigate to the raffle detail screen when the card is tapped
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RaffleDetailScreen(raffleData: raffle),
+  Widget buildMostPopularCard(Map<String, dynamic> raffle, DateTime expiryDate) {
+    return Container(
+      width: 104,
+      height: 160,
+      margin: const EdgeInsets.only(right: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9),
+        color: Colors.white,
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 3),
           ),
-        );
-      },
-      child: Container(
-        width: 104,
-        height: 160,
-        margin: const EdgeInsets.only(right: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(9),
-          color: Colors.white,
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 3),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 93,
+            height: 103,
+            margin: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              color: Colors.grey.shade300,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image with white border
-            Container(
-              width: 93,
-              height: 103,
-              margin: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(5),
-                color: Colors.grey.shade300,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(5),
+              child: Image.network(
+                raffle['picture'] ??
+                    'https://via.placeholder.com/370x160.png/cccccc/ffffff?text=No+Image',
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(5),
-                child: Image.network(
-                  raffle['picture'] ?? 'https://via.placeholder.com/370x160.png/cccccc/ffffff?text=No+Image',
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: CountdownTimer(expiryDate: expiryDate),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            child: Row(
+              children: [
+                Text(
+                  raffle['likes'].toString(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 5),
+                const Icon(
+                  Icons.favorite,
+                  color: Colors.red,
+                  size: 14,
+                ),
+              ],
             ),
-            // Countdown timer
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: CountdownTimer(expiryDate: expiryDate),
-            ),
-            // Like count and heart icon
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  Text(
-                    raffle['likes'].toString(),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                  const Icon(
-                    Icons.favorite,
-                    color: Colors.red,
-                    size: 14,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

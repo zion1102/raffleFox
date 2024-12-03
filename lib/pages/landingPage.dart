@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
-import 'create_account_screen.dart'; // Import the CreateAccountScreen
-import 'login_screen.dart'; // Import the LoginScreen
+import 'package:raffle_fox/pages/create_account_screen.dart';
+import 'package:raffle_fox/pages/login_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:raffle_fox/blocs/auth/auth_bloc.dart';
+import 'package:raffle_fox/services/firebase_services.dart';
 
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
@@ -20,53 +22,47 @@ class LandingPage extends StatelessWidget {
           child: Container(
             width: width,
             padding: EdgeInsets.symmetric(
-              horizontal: width * 0.05, // 5% padding for horizontal sides
-              vertical: height * 0.02, // 2% padding for vertical space
+              horizontal: width * 0.05,
+              vertical: height * 0.02,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(height: height * 0.1), // 10% space at the top
-                // Logo
+                SizedBox(height: height * 0.1),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    94,
-                  ),
+                  borderRadius: BorderRadius.circular(94),
                   child: Image.asset(
                     "assets/images/img_raffle_fox_logo.png",
-                    height: height * 0.23, // Scales the logo based on screen height
-                    width: width * 0.5, // Adjusts width dynamically
+                    height: height * 0.23,
+                    width: width * 0.5,
                   ),
                 ),
-                SizedBox(height: height * 0.03), // 3% spacing
-                // "RaffleFox" Title
+                SizedBox(height: height * 0.03),
                 Text(
                   "RaffleFox",
                   style: TextStyle(
                     color: const Color(0XFF202020),
-                    fontSize: width * 0.13, // Scales font size based on width
+                    fontSize: width * 0.13,
                     fontFamily: 'Gibson',
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: height * 0.01), // 1% spacing
-                // "Are you clever like a fox?" text
+                SizedBox(height: height * 0.01),
                 Text(
                   "Are you clever\nlike a fox?",
                   maxLines: 2,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: const Color(0XFF222222),
-                    fontSize: width * 0.06, // Scales font size
+                    fontSize: width * 0.06,
                     fontFamily: 'Gotham',
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                SizedBox(height: height * 0.15), // 15% space before button
-                // "Let's get started" button
+                SizedBox(height: height * 0.15),
                 SizedBox(
-                  width: width * 0.8, // 80% of screen width
-                  height: height * 0.07, // 7% of screen height
+                  width: width * 0.8,
+                  height: height * 0.07,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
@@ -76,7 +72,6 @@ class LandingPage extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      // Navigate to Create Account screen when the button is clicked
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -88,22 +83,23 @@ class LandingPage extends StatelessWidget {
                       "Let's get started",
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: width * 0.06, // Dynamic font size
+                        fontSize: width * 0.06,
                         fontFamily: 'Gibson',
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(height: height * 0.03), // 3% space
-                // "I already have an account" + Icon
+                SizedBox(height: height * 0.03),
                 GestureDetector(
                   onTap: () {
-                    // Navigate to LoginScreen when this text is tapped
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
+                        builder: (context) => BlocProvider(
+                          create: (_) => AuthBloc(FirebaseService()),
+                          child:  LoginScreen(),
+                        ),
                       ),
                     );
                   },
@@ -114,16 +110,16 @@ class LandingPage extends StatelessWidget {
                         "I already have an account",
                         style: TextStyle(
                           color: const Color(0XE5202020),
-                          fontSize: width * 0.04, // Scaled font size
+                          fontSize: width * 0.04,
                           fontFamily: 'Gotham',
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(width: width * 0.02), // 2% space between text and icon
+                      SizedBox(width: width * 0.02),
                       SvgPicture.asset(
                         "assets/images/Button.svg",
-                        height: width * 0.07, // 7% of width
-                        width: width * 0.07, // 7% of width
+                        height: width * 0.07,
+                        width: width * 0.07,
                       ),
                     ],
                   ),

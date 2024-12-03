@@ -1,143 +1,142 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:raffle_fox/services/cart_service.dart';
-import 'package:raffle_fox/services/firebase_services.dart';
-import 'package:raffle_fox/widgets/BottomNavBar.dart';
+import 'package:raffle_fox/blocs/cart/cart_bloc.dart';
 import 'package:raffle_fox/widgets/ProfileAppBar.dart';
+import 'package:raffle_fox/widgets/BottomNavBar.dart';
 import 'package:raffle_fox/widgets/RaffleTicket.dart';
 
-class CartScreen extends StatefulWidget {
+class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   @override
-  _CartScreenState createState() => _CartScreenState();
-}
-
-class _CartScreenState extends State<CartScreen> {
-  final CartService _cartService = CartService();
-  final FirebaseService _firebaseService = FirebaseService();
-  List<Map<String, dynamic>> cartItems = [];
-  bool loading = true;
-  double cartTotal = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCartItems();
-  }
-
-  Future<void> _loadCartItems() async {
-    final user = await _firebaseService.getUserDetails();
-    if (user != null) {
-      final userId = user['uid'];
-      cartItems = await _cartService.getCartItemsForUser(userId);
-      cartTotal = await _cartService.calculateCartTotal(userId);
-    }
-    setState(() {
-      loading = false;
-    });
-  }
-
-  void _showCheckoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Checkout Confirmation"),
-        content: Text("Proceed to checkout with a total of \$${cartTotal.toStringAsFixed(2)}?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _handleCheckout();
-            },
-            child: const Text("Yes, Checkout"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleCheckout() async {
-    setState(() {
-      loading = true;
-    });
-
-    final user = await _firebaseService.getUserDetails();
-    if (user != null) {
-      final userId = user['uid'];
-      await _cartService.checkoutCart(userId);
-      cartItems.clear();
-      cartTotal = 0.0;
-      setState(() {
-        loading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Checkout successful!")),
-      );
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const ProfileAppBar(),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : cartItems.isEmpty
-              ? const Center(child: Text("No items in cart."))
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16.0),
-                        itemCount: cartItems.length,
-                        itemBuilder: (context, index) {
-                          final item = cartItems[index];
-                          final expiryDate = item['expiryDate'].toDate();
+    return BlocProvider(
+      create: (context) =>
+          CartBloc(cartService: CartService())..add(LoadCartItems()),
+      child: Scaffold(
+        appBar: const ProfileAppBar(),
+        body: BlocBuilder<CartBloc, CartState>(
+          builder: (context, state) {
+            if (state is CartLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is CartLoaded) {
+              if (state.cartItems.isEmpty) {
+                return const Center(child: Text("No items in cart."));
+              }
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16.0),
-                            child: RaffleTicket(
-                              raffleId: item['raffleId'],
-                              expiryDate: expiryDate,
-                              title: item['raffleTitle'],
-                              guesses: 1,
-                              totalPrice: item['price'] ?? 0.0,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: cartItems.isNotEmpty ? _showCheckoutDialog : null,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16.0),
-                            backgroundColor: const Color(0xFFFF5F00),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                            ),
+              final now = DateTime.now();
+
+              // Combine tickets of the same raffle and exclude expired raffles
+              final Map<String, Map<String, dynamic>> combinedRaffles = {};
+
+              for (var item in state.cartItems) {
+                final expiryDate = item['expiryDate']?.toDate();
+
+                if (expiryDate != null && expiryDate.isAfter(now)) {
+                  final raffleId = item['raffleId'];
+
+                  if (raffleId != null) {
+                    if (combinedRaffles.containsKey(raffleId)) {
+                      combinedRaffles[raffleId]!['tickets'] =
+                          (combinedRaffles[raffleId]!['tickets'] ?? 0) + 1;
+                      combinedRaffles[raffleId]!['totalPrice'] =
+                          (combinedRaffles[raffleId]!['totalPrice'] ?? 0.0) +
+                              (item['price'] ?? 0.0);
+                    } else {
+                      combinedRaffles[raffleId] = {
+                        'raffleId': raffleId,
+                        'raffleTitle': item['raffleTitle'] ?? 'Unknown',
+                        'expiryDate': expiryDate,
+                        'tickets': 1,
+                        'totalPrice': item['price'] ?? 0.0,
+                      };
+                    }
+                  }
+                }
+              }
+
+              final validRaffles = combinedRaffles.values.toList();
+
+              // Calculate the total price of valid raffles
+              final totalPrice = validRaffles.fold<double>(
+                0.0,
+                (sum, item) => sum + (item['totalPrice'] ?? 0.0),
+              );
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      itemCount: validRaffles.length,
+                      itemBuilder: (context, index) {
+                        final raffle = validRaffles[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: RaffleTicket(
+                            raffleId: raffle['raffleId'],
+                            expiryDate: raffle['expiryDate'],
+                            title: raffle['raffleTitle'],
+                            guesses: raffle['tickets'],
+                            totalPrice: raffle['totalPrice'],
                           ),
-                          child: Text(
-                            "Checkout - \$${cartTotal.toStringAsFixed(2)}",
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
-                  ],
+                  ),
+                  // Checkout Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 20.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child:ElevatedButton(
+  onPressed: validRaffles.isEmpty
+      ? null // Disable if no valid raffles
+      : () {
+          context.read<CartBloc>().add(CheckoutCart());
+        },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFFFF5F00),
+    padding: const EdgeInsets.symmetric(vertical: 16.0),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12.0),
+    ),
+  ),
+  child: Text(
+    validRaffles.isEmpty
+        ? "No valid items to checkout"
+        : "Checkout - \$${totalPrice.toStringAsFixed(2)}",
+    style: const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+      color: Colors.white,
+    ),
+  ),
+),
+
+                    ),
+                  ),
+                ],
+              );
+            } else if (state is CartError) {
+              return Center(
+                child: Text(
+                  state.message,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-      bottomNavigationBar: const BottomNavBar(),
+              );
+            } else {
+              return const Center(child: Text("Unexpected state."));
+            }
+          },
+        ),
+        bottomNavigationBar: const BottomNavBar(),
+      ),
     );
   }
 }

@@ -72,50 +72,53 @@ class _TopRafflesState extends State<TopRaffles> {
       },
     );
   }
+Widget _buildRaffleSquare(BuildContext context, Map<String, dynamic> raffle, double size) {
+  final expiryDate = raffle['expiryDate'] is Timestamp
+      ? (raffle['expiryDate'] as Timestamp).toDate()
+      : raffle['expiryDate'];
 
-  Widget _buildRaffleSquare(BuildContext context, Map<String, dynamic> raffle, double size) {
-    // Check if 'expiryDate' is a Timestamp and convert it to DateTime
-    DateTime expiryDate = (raffle['expiryDate'] is Timestamp)
-        ? (raffle['expiryDate'] as Timestamp).toDate()
-        : DateTime.parse(raffle['expiryDate']);
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RaffleDetailScreen(raffleData: raffle),
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RaffleDetailScreen(
+            raffleData: {
+              ...raffle,
+              'expiryDate': expiryDate, // Ensure expiryDate is a DateTime
+            },
           ),
-        );
-      },
-      child: Column(
-        children: [
-          // Image Container
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.white, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              image: DecorationImage(
-                image: NetworkImage(raffle['picture'] ?? 'https://via.placeholder.com/150'),
-                fit: BoxFit.cover,
+        ),
+      );
+    },
+    child: Column(
+      children: [
+        // Image Container
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white, width: 4),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
               ),
+            ],
+            image: DecorationImage(
+              image: NetworkImage(raffle['picture'] ?? 'https://via.placeholder.com/150'),
+              fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(height: 8), // Space between the image and the timer
-          // Countdown Timer below the image
-          CountdownTimer(expiryDate: expiryDate),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(height: 8),
+        CountdownTimer(expiryDate: expiryDate),
+      ],
+    ),
+  );
+}
+
 }
 
 class CountdownTimer extends StatefulWidget {

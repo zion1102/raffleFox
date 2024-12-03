@@ -102,7 +102,7 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                          builder: (context) =>  LoginScreen(),
                         ),
                         (route) => false,
                       );

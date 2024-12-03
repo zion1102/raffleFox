@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0D54F8642CF0D830004EC9A8 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D54F8632CF0D830004EC9A8 /* StoreKit.framework */; };
 		0DFBB1602CED03F90041C1DE /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0DFBB15D2CED00E40041C1DE /* GoogleService-Info.plist */; };
 		0DFBB1612CED04170041C1DE /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0DFBB15D2CED00E40041C1DE /* GoogleService-Info.plist */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
@@ -44,6 +45,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0D54F8632CF0D830004EC9A8 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		0DFBB15D2CED00E40041C1DE /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		0DFBB1622CEE792F0041C1DE /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		1025ABDE718EC323A0DD152A /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,6 +87,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E6D1CBA871FF5F967D672935 /* Pods_Runner.framework in Frameworks */,
+				0D54F8642CF0D830004EC9A8 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,6 +97,7 @@
 		03EA25B58D25A55CD86AB8B8 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				0D54F8632CF0D830004EC9A8 /* StoreKit.framework */,
 				1025ABDE718EC323A0DD152A /* Pods_Runner.framework */,
 				5C246D068ED4E9EE89451A43 /* Pods_RunnerTests.framework */,
 			);
@@ -461,6 +465,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -496,16 +501,23 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = Y5N3U7CU4N;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Raffle Fox";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.raffleFox;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.raffle-Fox";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -520,6 +532,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.raffleFox.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -538,6 +551,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.raffleFox.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -553,7 +567,9 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y5N3U7CU4N;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.raffleFox.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -586,6 +602,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -643,6 +660,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -680,15 +698,19 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = Y5N3U7CU4N;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Raffle Fox";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.raffleFox;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.raffle-Fox";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -704,15 +726,19 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = Y5N3U7CU4N;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Raffle Fox";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.raffleFox;
+				MARKETING_VERSION = 0.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.example.raffle-Fox";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
